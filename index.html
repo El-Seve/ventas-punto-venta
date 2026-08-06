@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ventas del Día — Punto de Venta</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --panel-2: #273449;
+    --border: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #22c55e;
+    --accent-2: #3b82f6;
+    --danger: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .subtitle { color: var(--muted); font-size: 14px; }
+  .date-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 12px;
+  }
+  .date-nav button {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .date-nav button:hover { background: #334155; }
+  .date-label { font-weight: 600; min-width: 150px; text-align: center; }
+  .today-badge {
+    font-size: 11px;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    padding: 1px 8px;
+    margin-left: 4px;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 18px;
+  }
+  .card h2 {
+    font-size: 15px;
+    margin: 0 0 14px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .promoter-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  .promoter-row label { font-size: 13px; color: var(--muted); white-space: nowrap; }
+  .promoter-row input {
+    flex: 1;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 15px;
+  }
+
+  .sale-form {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 10px;
+    align-items: end;
+  }
+  .field label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .field select, .field input {
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 9px 10px;
+    font-size: 14px;
+  }
+  .field input::placeholder { color: #64748b; }
+  #modeloOtro { margin-top: 6px; display: none; }
+
+  .btn {
+    background: var(--accent);
+    color: #06210f;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-secondary {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-danger {
+    background: transparent;
+    color: var(--danger);
+    border: 1px solid var(--danger);
+  }
+  .btn-small { padding: 5px 10px; font-size: 12px; border-radius: 6px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; }
+  tr:last-child td { border-bottom: none; }
+  td.num, th.num { text-align: right; }
+  .empty-state { color: var(--muted); text-align: center; padding: 24px 0; font-size: 14px; }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .stat {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .stat .label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .stat .value { font-size: 22px; font-weight: 700; }
+  .stat.accent .value { color: var(--accent); }
+
+  .toolbar { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; flex-wrap: wrap; }
+
+  footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 20px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>📱 Ventas del Día</h1>
+      <div class="subtitle">Registro de ventas por modelo — Punto de Venta</div>
+    </div>
+    <div class="date-nav">
+      <button id="prevDay" title="Día anterior">◀</button>
+      <div class="date-label" id="dateLabel">—</div>
+      <button id="nextDay" title="Día siguiente">▶</button>
+      <button id="todayBtn">Hoy</button>
+    </div>
+  </header>
+
+  <div class="card">
+    <div class="promoter-row">
+      <label for="promotor">Promotor:</label>
+      <input type="text" id="promotor" placeholder="Nombre del promotor">
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Registrar venta</h2>
+    <div class="sale-form">
+      <div class="field">
+        <label for="modelo">Modelo de smartphone</label>
+        <select id="modelo"></select>
+        <input type="text" id="modeloOtro" placeholder="Escribe el modelo...">
+      </div>
+      <div class="field">
+        <label for="cantidad">Cantidad</label>
+        <input type="number" id="cantidad" min="1" value="1">
+      </div>
+      <div class="field">
+        <label for="precio">Precio unitario</label>
+        <input type="number" id="precio" min="0" step="0.01" placeholder="0.00">
+      </div>
+      <div class="field">
+        <button class="btn" id="addSale">Agregar venta</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Resumen del día</h2>
+    <div class="summary-grid" id="summaryGrid"></div>
+    <table id="modelSummaryTable">
+      <thead>
+        <tr><th>Modelo</th><th class="num">Unidades</th><th class="num">Subtotal</th></tr>
+      </thead>
+      <tbody id="modelSummaryBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Detalle de ventas</h2>
+    <table id="salesTable">
+      <thead>
+        <tr>
+          <th>Hora</th>
+          <th>Modelo</th>
+          <th class="num">Cant.</th>
+          <th class="num">P. Unit.</th>
+          <th class="num">Subtotal</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="salesBody"></tbody>
+    </table>
+    <div class="empty-state" id="emptyState" style="display:none;">Aún no hay ventas registradas para este día.</div>
+    <div class="toolbar">
+      <button class="btn btn-secondary btn-small" id="exportCsv">Exportar CSV</button>
+      <button class="btn btn-danger btn-small" id="clearDay">Vaciar día</button>
+    </div>
+  </div>
+
+  <footer>Los datos se guardan en este navegador (localStorage), por día.</footer>
+</div>
+
+<script>
+(function () {
+  const MODELOS_POR_MARCA = {
+    "Honor": ["Honor Magic7 Pro", "Honor Magic7", "Honor 200 Pro", "Honor X9c", "Honor X7c"],
+    "Samsung": ["Galaxy S25 Ultra", "Galaxy S25+", "Galaxy S25", "Galaxy A56", "Galaxy A36", "Galaxy A16"],
+    "Xiaomi": ["Xiaomi 15 Ultra", "Xiaomi 15", "Redmi Note 14 Pro", "Redmi Note 14", "Redmi 14C"],
+    "Oppo": ["Oppo Find X8", "Oppo Reno13 Pro", "Oppo Reno13", "Oppo A3x"],
+    "ZTE": ["ZTE Nubia Z70 Ultra", "ZTE Blade V50", "ZTE Blade A75"],
+    "iPhone": ["iPhone 17 Pro Max", "iPhone 17 Pro", "iPhone 17", "iPhone 16e"],
+    "Vivo": ["Vivo X200 Pro", "Vivo V50", "Vivo Y29"],
+    "Motorola": ["Motorola Razr 60", "Motorola Edge 60", "Motorola G85"],
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const modeloSelect = $("modelo");
+  const modeloOtro = $("modeloOtro");
+  const cantidadInput = $("cantidad");
+  const precioInput = $("precio");
+  const promotorInput = $("promotor");
+  const dateLabel = $("dateLabel");
+  const salesBody = $("salesBody");
+  const emptyState = $("emptyState");
+  const modelSummaryBody = $("modelSummaryBody");
+  const summaryGrid = $("summaryGrid");
+
+  let currentDate = new Date();
+  currentDate.setHours(0, 0, 0, 0);
+
+  function fmtDateKey(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
+  function fmtDateLabel(d) {
+    const opts = { weekday: "long", day: "numeric", month: "long" };
+    let label = d.toLocaleDateString("es-ES", opts);
+    label = label.charAt(0).toUpperCase() + label.slice(1);
+    return label;
+  }
+
+  function isToday(d) {
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    return d.getTime() === t.getTime();
+  }
+
+  function storageKey(d) {
+    return `ventasPOS_${fmtDateKey(d)}`;
+  }
+
+  function loadSales() {
+    const raw = localStorage.getItem(storageKey(currentDate));
+    return raw ? JSON.parse(raw) : [];
+  }
+
+  function saveSales(sales) {
+    localStorage.setItem(storageKey(currentDate), JSON.stringify(sales));
+  }
+
+  function populateModelos() {
+    modeloSelect.innerHTML = "";
+    Object.entries(MODELOS_POR_MARCA).forEach(([marca, modelos]) => {
+      const group = document.createElement("optgroup");
+      group.label = marca;
+      modelos.forEach((m) => {
+        const opt = document.createElement("option");
+        opt.value = m;
+        opt.textContent = m;
+        group.appendChild(opt);
+      });
+      modeloSelect.appendChild(group);
+    });
+    const otro = document.createElement("option");
+    otro.value = "Otro...";
+    otro.textContent = "Otro...";
+    modeloSelect.appendChild(otro);
+  }
+
+  function money(n) {
+    return "$" + n.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function render() {
+    dateLabel.innerHTML = fmtDateLabel(currentDate) + (isToday(currentDate) ? ' <span class="today-badge">HOY</span>' : "");
+    const sales = loadSales();
+
+    salesBody.innerHTML = "";
+    if (sales.length === 0) {
+      emptyState.style.display = "block";
+    } else {
+      emptyState.style.display = "none";
+      sales.forEach((s, idx) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${s.hora}</td>
+          <td>${s.modelo}</td>
+          <td class="num">${s.cantidad}</td>
+          <td class="num">${money(s.precio)}</td>
+          <td class="num">${money(s.cantidad * s.precio)}</td>
+          <td><button class="btn btn-danger btn-small" data-idx="${idx}">Borrar</button></td>
+        `;
+        salesBody.appendChild(tr);
+      });
+    }
+
+    salesBody.querySelectorAll("button[data-idx]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const idx = parseInt(btn.getAttribute("data-idx"), 10);
+        const s = loadSales();
+        s.splice(idx, 1);
+        saveSales(s);
+        render();
+      });
+    });
+
+    const totalUnidades = sales.reduce((a, s) => a + s.cantidad, 0);
+    const totalDinero = sales.reduce((a, s) => a + s.cantidad * s.precio, 0);
+    const modelosDistintos = new Set(sales.map((s) => s.modelo)).size;
+
+    summaryGrid.innerHTML = `
+      <div class="stat accent">
+        <div class="label">Total vendido</div>
+        <div class="value">${money(totalDinero)}</div>
+      </div>
+      <div class="stat">
+        <div class="label">Unidades vendidas</div>
+        <div class="value">${totalUnidades}</div>
+      </div>
+      <div class="stat">
+        <div class="label">Modelos distintos</div>
+        <div class="value">${modelosDistintos}</div>
+      </div>
+      <div class="stat">
+        <div class="label"># de ventas</div>
+        <div class="value">${sales.length}</div>
+      </div>
+    `;
+
+    const byModel = {};
+    sales.forEach((s) => {
+      if (!byModel[s.modelo]) byModel[s.modelo] = { unidades: 0, subtotal: 0 };
+      byModel[s.modelo].unidades += s.cantidad;
+      byModel[s.modelo].subtotal += s.cantidad * s.precio;
+    });
+    const rows = Object.entries(byModel).sort((a, b) => b[1].unidades - a[1].unidades);
+    modelSummaryBody.innerHTML = rows.length
+      ? rows.map(([modelo, v]) => `
+          <tr>
+            <td>${modelo}</td>
+            <td class="num">${v.unidades}</td>
+            <td class="num">${money(v.subtotal)}</td>
+          </tr>
+        `).join("")
+      : `<tr><td colspan="3" class="empty-state">Sin datos aún</td></tr>`;
+  }
+
+  modeloSelect.addEventListener("change", () => {
+    modeloOtro.style.display = modeloSelect.value === "Otro..." ? "block" : "none";
+  });
+
+  $("addSale").addEventListener("click", () => {
+    let modelo = modeloSelect.value;
+    if (modelo === "Otro...") {
+      modelo = modeloOtro.value.trim();
+      if (!modelo) {
+        modeloOtro.focus();
+        return;
+      }
+    }
+    const cantidad = parseInt(cantidadInput.value, 10);
+    const precio = parseFloat(precioInput.value) || 0;
+    if (!cantidad || cantidad < 1) {
+      cantidadInput.focus();
+      return;
+    }
+
+    const sales = loadSales();
+    sales.push({
+      modelo,
+      cantidad,
+      precio,
+      hora: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
+    });
+    saveSales(sales);
+
+    cantidadInput.value = 1;
+    precioInput.value = "";
+    modeloOtro.value = "";
+    render();
+  });
+
+  $("clearDay").addEventListener("click", () => {
+    if (confirm("¿Vaciar todas las ventas registradas de este día? Esta acción no se puede deshacer.")) {
+      saveSales([]);
+      render();
+    }
+  });
+
+  $("exportCsv").addEventListener("click", () => {
+    const sales = loadSales();
+    if (sales.length === 0) return;
+    const header = "Hora,Modelo,Cantidad,Precio Unitario,Subtotal\n";
+    const rows = sales.map(
+      (s) => `${s.hora},"${s.modelo}",${s.cantidad},${s.precio.toFixed(2)},${(s.cantidad * s.precio).toFixed(2)}`
+    );
+    const csv = header + rows.join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `ventas_${fmtDateKey(currentDate)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  $("prevDay").addEventListener("click", () => {
+    currentDate.setDate(currentDate.getDate() - 1);
+    render();
+  });
+  $("nextDay").addEventListener("click", () => {
+    currentDate.setDate(currentDate.getDate() + 1);
+    render();
+  });
+  $("todayBtn").addEventListener("click", () => {
+    currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+    render();
+  });
+
+  promotorInput.addEventListener("input", () => {
+    localStorage.setItem("ventasPOS_promotor", promotorInput.value);
+  });
+  promotorInput.value = localStorage.getItem("ventasPOS_promotor") || "";
+
+  populateModelos();
+  render();
+})();
+</script>
+</body>
+</html>
