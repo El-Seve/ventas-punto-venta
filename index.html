@@ -3,174 +3,305 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ventas del Día — Punto de Venta</title>
+<title>VENTAS // Punto de Venta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0f172a;
-    --panel: #1e293b;
-    --panel-2: #273449;
-    --border: #334155;
-    --text: #e2e8f0;
-    --muted: #94a3b8;
-    --accent: #22c55e;
-    --accent-2: #3b82f6;
-    --danger: #ef4444;
+    --bg: #fafafa;
+    --surface: #ffffff;
+    --surface-2: #f4f4f5;
+    --border: #e4e4e7;
+    --ink: #18181b;
+    --muted: #71717a;
+    --accent: #2563eb;
+    --accent-soft: #eff4ff;
+    --danger: #dc2626;
+    --danger-soft: #fef2f2;
+    --success: #16a34a;
+    --radius: 10px;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    font-family: "Inter", -apple-system, "Segoe UI", Arial, sans-serif;
+    font-weight: 400;
     background: var(--bg);
-    color: var(--text);
+    color: var(--ink);
     min-height: 100vh;
-    padding: 24px;
+    padding: 32px 20px 60px;
+    -webkit-font-smoothing: antialiased;
   }
-  .wrap { max-width: 960px; margin: 0 auto; }
+  .wrap { max-width: 880px; margin: 0 auto; }
+
   header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-end;
+    align-items: flex-start;
     flex-wrap: wrap;
-    gap: 12px;
-    margin-bottom: 20px;
+    gap: 16px;
+    margin-bottom: 28px;
   }
-  h1 { font-size: 22px; margin: 0 0 4px; }
-  .subtitle { color: var(--muted); font-size: 14px; }
-  .date-nav {
+  h1 {
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.2;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .subtitle { color: var(--muted); font-size: 13px; max-width: 380px; line-height: 1.5; }
+
+  .sync-box {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
     display: flex;
     align-items: center;
     gap: 8px;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 8px 12px;
+    white-space: nowrap;
   }
-  .date-nav button {
-    background: var(--panel-2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    border-radius: 6px;
-    padding: 4px 10px;
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+  .dot.on { background: var(--success); }
+  .dot.off { background: var(--danger); }
+  .sync-box button {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 13px;
+    padding: 2px 4px;
     cursor: pointer;
-    font-size: 14px;
+    line-height: 1;
+    border-radius: 6px;
   }
-  .date-nav button:hover { background: #334155; }
-  .date-label { font-weight: 600; min-width: 150px; text-align: center; }
-  .today-badge {
-    font-size: 11px;
-    color: var(--accent);
-    border: 1px solid var(--accent);
-    border-radius: 999px;
-    padding: 1px 8px;
-    margin-left: 4px;
+  .sync-box button:hover { background: var(--surface-2); color: var(--ink); }
+
+  .banner {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    font-size: 13px;
+    color: var(--ink);
+    margin-bottom: 18px;
+    line-height: 1.55;
+    background: var(--accent-soft);
   }
+  .banner.warn { background: var(--accent-soft); border-left-color: var(--accent); }
+  .banner.offline { background: var(--danger-soft); border-left-color: var(--danger); }
+  .banner code { background: rgba(0,0,0,0.06); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+
+  .tab-bar { display: flex; gap: 4px; margin-bottom: 24px; background: var(--surface-2); padding: 4px; border-radius: var(--radius); width: fit-content; }
+  .tab {
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background .12s ease, color .12s ease;
+  }
+  .tab:hover { color: var(--ink); }
+  .tab.active { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
 
   .card {
-    background: var(--panel);
+    background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 18px;
-    margin-bottom: 18px;
-  }
-  .card h2 {
-    font-size: 15px;
-    margin: 0 0 14px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  .promoter-row {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    margin-bottom: 4px;
-  }
-  .promoter-row label { font-size: 13px; color: var(--muted); white-space: nowrap; }
-  .promoter-row input {
-    flex: 1;
-    background: var(--panel-2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    border-radius: 8px;
-    padding: 8px 12px;
-    font-size: 15px;
-  }
-
-  .sale-form {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr auto;
-    gap: 10px;
-    align-items: end;
-  }
-  .field label {
-    display: block;
-    font-size: 12px;
-    color: var(--muted);
-    margin-bottom: 4px;
-  }
-  .field select, .field input {
-    width: 100%;
-    background: var(--panel-2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    border-radius: 8px;
-    padding: 9px 10px;
-    font-size: 14px;
-  }
-  .field input::placeholder { color: #64748b; }
-  #modeloOtro { margin-top: 6px; display: none; }
-
-  .btn {
-    background: var(--accent);
-    color: #06210f;
-    border: none;
-    border-radius: 8px;
-    padding: 10px 18px;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-  }
-  .btn:hover { filter: brightness(1.08); }
-  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .btn-secondary {
-    background: var(--panel-2);
-    color: var(--text);
-    border: 1px solid var(--border);
-  }
-  .btn-danger {
-    background: transparent;
-    color: var(--danger);
-    border: 1px solid var(--danger);
-  }
-  .btn-small { padding: 5px 10px; font-size: 12px; border-radius: 6px; }
-
-  table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--border); }
-  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; }
-  tr:last-child td { border-bottom: none; }
-  td.num, th.num { text-align: right; }
-  .empty-state { color: var(--muted); text-align: center; padding: 24px 0; font-size: 14px; }
-
-  .summary-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 12px;
+    border-radius: var(--radius);
+    padding: 20px;
     margin-bottom: 16px;
   }
-  .stat {
-    background: var(--panel-2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px 14px;
+  .card h2 {
+    font-size: 13px;
+    font-weight: 600;
+    margin: 0 0 16px;
+    color: var(--muted);
+    letter-spacing: 0.01em;
   }
-  .stat .label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
-  .stat .value { font-size: 22px; font-weight: 700; }
-  .stat.accent .value { color: var(--accent); }
 
-  .toolbar { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; flex-wrap: wrap; }
+  input, select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--ink);
+    padding: 9px 11px;
+    font-family: inherit;
+    font-weight: 400;
+    font-size: 14px;
+    width: 100%;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input::placeholder { color: #a1a1aa; }
+  select:disabled { background: var(--surface-2); color: var(--muted); cursor: not-allowed; }
 
-  footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 20px; }
+  .date-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface-2);
+    border-radius: 8px;
+    padding: 6px 8px;
+  }
+  .date-nav button {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--ink);
+    padding: 5px 10px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 13px;
+  }
+  .date-nav button:hover { border-color: var(--accent); color: var(--accent); }
+  .date-label { font-weight: 500; min-width: 150px; text-align: center; font-size: 13px; }
+  .today-badge {
+    font-size: 10px;
+    font-weight: 600;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: 999px;
+    padding: 2px 8px;
+    margin-left: 6px;
+    display: inline-block;
+  }
+
+  .form-grid { display: grid; gap: 10px; align-items: end; }
+  .form-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .form-grid.cols-1 { grid-template-columns: 1fr; }
+  .field label { display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 5px; }
+
+  .brand-qty-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .brand-qty-item { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+  .brand-qty-item label { display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 6px; }
+  .brand-qty-item input { padding: 7px 9px; font-size: 14px; }
+
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    z-index: 100;
+  }
+  .modal-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 24px;
+    max-width: 420px;
+    width: 100%;
+    max-height: 82vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.18);
+  }
+  .modal-card h2 { margin: 0 0 16px; font-size: 15px; font-weight: 600; color: var(--ink); }
+  .modal-close {
+    position: absolute; top: 14px; right: 14px;
+    background: none; border: none;
+    font-size: 15px; line-height: 1;
+    cursor: pointer; color: var(--muted);
+    padding: 4px;
+  }
+  .modal-close:hover { color: var(--ink); }
+
+  .daily-chart { overflow-x: auto; }
+  .line-chart-svg { width: 100%; min-width: 620px; height: 160px; display: block; }
+
+  .zone-group { margin-bottom: 20px; }
+  .zone-group:last-child { margin-bottom: 0; }
+  .zone-group-title { font-size: 12px; font-weight: 600; color: var(--ink); margin-bottom: 8px; }
+
+  .btn {
+    background: var(--ink);
+    color: #fff;
+    border: 1px solid var(--ink);
+    border-radius: 8px;
+    padding: 9px 18px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity .12s ease;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn:active { opacity: 0.7; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-secondary { background: var(--surface); color: var(--ink); border-color: var(--border); }
+  .btn-secondary:hover { background: var(--surface-2); opacity: 1; }
+  .btn-danger { background: var(--danger-soft); color: var(--danger); border-color: var(--danger-soft); }
+  .btn-danger:hover { background: #fee2e2; opacity: 1; }
+  .btn-small { padding: 6px 11px; font-size: 12px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; }
+  tr:last-child td { border-bottom: none; }
+  tfoot td { border-bottom: none; border-top: 1px solid var(--border); padding-top: 12px; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .empty-state { color: var(--muted); text-align: center; padding: 26px 0; font-size: 13px; }
+
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .stat { background: var(--surface-2); border-radius: var(--radius); padding: 14px 16px; }
+  .stat .label { font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 6px; }
+  .stat .value { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .stat.hero .value { color: var(--success); }
+
+  .toolbar { display: flex; gap: 10px; justify-content: flex-end; margin-top: 6px; flex-wrap: wrap; }
+
+  .range-bar { display: flex; gap: 4px; margin-bottom: 18px; flex-wrap: wrap; background: var(--surface-2); padding: 4px; border-radius: var(--radius); width: fit-content; }
+  .range-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    padding: 7px 14px;
+    font-weight: 500;
+    font-size: 13px;
+    border-radius: 7px;
+    cursor: pointer;
+  }
+  .range-btn:hover { color: var(--ink); }
+  .range-btn.active { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+
+  .bar-row { display: grid; grid-template-columns: minmax(90px,160px) 1fr 44px; gap: 12px; align-items: center; margin-bottom: 12px; }
+  .bar-row .name { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-track { background: var(--surface-2); border-radius: 5px; height: 8px; position: relative; }
+  .bar-fill { height: 100%; border-radius: 5px; background: var(--accent); }
+  .bar-row .amount { font-size: 12px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+
+  .rank-badge {
+    display: inline-block;
+    width: 20px; height: 20px;
+    line-height: 20px;
+    text-align: center;
+    border-radius: 50%;
+    background: var(--surface-2);
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 11px;
+    margin-right: 8px;
+  }
+  .rank-badge.r1 { background: var(--accent); color: #fff; }
+  .rank-badge.r2 { background: var(--ink); color: #fff; }
+  .rank-badge.r3 { background: var(--muted); color: #fff; }
+
+  footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 28px; }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  @media (max-width: 640px) {
+    .form-grid.cols-3 { grid-template-columns: 1fr; }
+    .brand-qty-grid { grid-template-columns: repeat(2, 1fr); }
+    header { flex-direction: column; }
+  }
 </style>
 </head>
 <body>
@@ -178,108 +309,215 @@
   <header>
     <div>
       <h1>📱 Ventas del Día</h1>
-      <div class="subtitle">Registro de ventas por modelo — Punto de Venta</div>
+      <div class="subtitle">Registro y dashboard de cobertura de ventas por región — sincronizado con Google Sheets para todo el equipo de promotores.</div>
     </div>
-    <div class="date-nav">
-      <button id="prevDay" title="Día anterior">◀</button>
-      <div class="date-label" id="dateLabel">—</div>
-      <button id="nextDay" title="Día siguiente">▶</button>
-      <button id="todayBtn">Hoy</button>
+    <div class="sync-box">
+      <span class="dot" id="syncDot"></span>
+      <span id="syncLabel">Conectando…</span>
+      <button id="refreshBtn" title="Actualizar ahora">🔄</button>
     </div>
   </header>
 
-  <div class="card">
-    <div class="promoter-row">
-      <label for="promotor">Promotor:</label>
-      <input type="text" id="promotor" placeholder="Nombre del promotor">
+  <div id="configBanner" class="banner warn" style="display:none;">
+    ⚠️ <strong>Falta configurar Google Sheets.</strong> Los datos se están guardando solo en este navegador. Sigue la guía en <code>SETUP_SHEETS.md</code> y pega tu URL en <code>CONFIG.SHEETS_URL</code> dentro de este archivo.
+  </div>
+  <div id="offlineBanner" class="banner offline" style="display:none;">
+    ⚠️ <strong>Sin conexión con Google Sheets.</strong> Mostrando la última copia guardada en este navegador. Los nuevos registros se reintentarán al recuperar la conexión.
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab active" id="tabRegistrar">📋 Registrar</button>
+    <button class="tab" id="tabDashboard">📊 Dashboard</button>
+  </div>
+
+  <!-- VISTA: REGISTRAR -->
+  <div class="view active" id="viewRegistrar">
+    <div class="card">
+      <h2>Registrar venta del día</h2>
+
+      <div class="form-grid cols-3">
+        <div class="field">
+          <label for="region">Región</label>
+          <select id="region"></select>
+        </div>
+        <div class="field">
+          <label for="supervisor">Supervisor</label>
+          <select id="supervisor" disabled></select>
+        </div>
+        <div class="field">
+          <label for="tienda">Tienda</label>
+          <select id="tienda" disabled></select>
+        </div>
+      </div>
+
+      <div class="form-grid cols-1" style="margin-top:12px;">
+        <div class="field">
+          <label for="promotor">Promotor</label>
+          <input type="text" id="promotor" placeholder="Nombre del promotor">
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:16px;">
+        <label>Unidades vendidas por marca</label>
+        <div class="brand-qty-grid" id="brandQtyGrid"></div>
+      </div>
+
+      <div class="toolbar" style="justify-content:flex-end; margin-top:16px;">
+        <button class="btn" id="enviarBtn">Enviar</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="date-nav" style="margin-bottom:16px;">
+        <button id="prevDay" title="Día anterior">◀</button>
+        <div class="date-label" id="dateLabel">—</div>
+        <button id="nextDay" title="Día siguiente">▶</button>
+        <button id="todayBtn">Hoy</button>
+      </div>
+      <h2>Resumen del día</h2>
+      <table id="daySummaryTable">
+        <thead>
+          <tr><th>Marca</th><th class="num">Unidades</th></tr>
+        </thead>
+        <tbody id="daySummaryBody"></tbody>
+        <tfoot>
+          <tr><td><strong>Total</strong></td><td class="num" id="daySummaryTotal"><strong>0</strong></td></tr>
+        </tfoot>
+      </table>
+      <div class="empty-state" id="emptyState" style="display:none;">Aún no hay ventas registradas para este día.</div>
+      <div class="toolbar">
+        <button class="btn btn-secondary btn-small" id="monthSummaryBtn">Resumen</button>
+        <button class="btn btn-danger btn-small" id="clearDay">Vaciar día</button>
+      </div>
     </div>
   </div>
 
-  <div class="card">
-    <h2>Registrar venta</h2>
-    <div class="sale-form">
-      <div class="field">
-        <label for="modelo">Modelo de smartphone</label>
-        <select id="modelo"></select>
-        <input type="text" id="modeloOtro" placeholder="Escribe el modelo...">
-      </div>
-      <div class="field">
-        <label for="cantidad">Cantidad</label>
-        <input type="number" id="cantidad" min="1" value="1">
-      </div>
-      <div class="field">
-        <label for="precio">Precio unitario</label>
-        <input type="number" id="precio" min="0" step="0.01" placeholder="0.00">
-      </div>
-      <div class="field">
-        <button class="btn" id="addSale">Agregar venta</button>
-      </div>
+  <div class="modal-overlay" id="summaryModal" style="display:none;">
+    <div class="modal-card">
+      <button class="modal-close" id="closeSummaryModal" aria-label="Cerrar">✕</button>
+      <h2 id="summaryModalTitle">Resumen del mes</h2>
+      <div class="summary-grid" id="monthStatGrid" style="margin-bottom:16px;"></div>
+      <table>
+        <thead><tr><th>Marca</th><th class="num">Unidades</th></tr></thead>
+        <tbody id="monthSummaryBody"></tbody>
+      </table>
     </div>
   </div>
 
-  <div class="card">
-    <h2>Resumen del día</h2>
-    <div class="summary-grid" id="summaryGrid"></div>
-    <table id="modelSummaryTable">
-      <thead>
-        <tr><th>Modelo</th><th class="num">Unidades</th><th class="num">Subtotal</th></tr>
-      </thead>
-      <tbody id="modelSummaryBody"></tbody>
-    </table>
-  </div>
+  <!-- VISTA: DASHBOARD -->
+  <div class="view" id="viewDashboard">
+    <div class="range-bar">
+      <button class="range-btn active" data-range="hoy">Hoy</button>
+      <button class="range-btn" data-range="semana">Semana</button>
+      <button class="range-btn" data-range="mes">Mes</button>
+    </div>
 
-  <div class="card">
-    <h2>Detalle de ventas</h2>
-    <table id="salesTable">
-      <thead>
-        <tr>
-          <th>Hora</th>
-          <th>Modelo</th>
-          <th class="num">Cant.</th>
-          <th class="num">P. Unit.</th>
-          <th class="num">Subtotal</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="salesBody"></tbody>
-    </table>
-    <div class="empty-state" id="emptyState" style="display:none;">Aún no hay ventas registradas para este día.</div>
-    <div class="toolbar">
-      <button class="btn btn-secondary btn-small" id="exportCsv">Exportar CSV</button>
-      <button class="btn btn-danger btn-small" id="clearDay">Vaciar día</button>
+    <div class="card">
+      <h2>Resumen</h2>
+      <div class="summary-grid" id="dashSummaryGrid"></div>
+      <table>
+        <thead><tr><th>Ranking de marcas</th><th class="num">Unidades</th></tr></thead>
+        <tbody id="dashMarcaRankingBody"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Ventas diarias de Honor <span style="font-weight:400;">· últimos 14 días</span></h2>
+      <div class="daily-chart" id="honorDailyChart"></div>
+    </div>
+
+    <div class="card">
+      <h2>Ventas por marca</h2>
+      <div id="dashMarcaBars"></div>
+    </div>
+
+    <div class="card">
+      <h2>Ventas por región</h2>
+      <div id="dashRegionBars"></div>
+    </div>
+
+    <div class="card">
+      <h2>Ranking de promotores por región</h2>
+      <div id="dashPromotorByZone"></div>
     </div>
   </div>
 
-  <footer>Los datos se guardan en este navegador (localStorage), por día.</footer>
+  <footer>Datos sincronizados en Google Sheets · copia local de respaldo en este navegador · <a href="SETUP_SHEETS.md">guía de configuración</a></footer>
 </div>
 
 <script>
 (function () {
-  const MODELOS_POR_MARCA = {
-    "Honor": ["Honor Magic7 Pro", "Honor Magic7", "Honor 200 Pro", "Honor X9c", "Honor X7c"],
-    "Samsung": ["Galaxy S25 Ultra", "Galaxy S25+", "Galaxy S25", "Galaxy A56", "Galaxy A36", "Galaxy A16"],
-    "Xiaomi": ["Xiaomi 15 Ultra", "Xiaomi 15", "Redmi Note 14 Pro", "Redmi Note 14", "Redmi 14C"],
-    "Oppo": ["Oppo Find X8", "Oppo Reno13 Pro", "Oppo Reno13", "Oppo A3x"],
-    "ZTE": ["ZTE Nubia Z70 Ultra", "ZTE Blade V50", "ZTE Blade A75"],
-    "iPhone": ["iPhone 17 Pro Max", "iPhone 17 Pro", "iPhone 17", "iPhone 16e"],
-    "Vivo": ["Vivo X200 Pro", "Vivo V50", "Vivo Y29"],
-    "Motorola": ["Motorola Razr 60", "Motorola Edge 60", "Motorola G85"],
+  const CONFIG = {
+    // Pega aquí la URL de tu Web App de Google Apps Script (ver SETUP_SHEETS.md)
+    SHEETS_URL: "PEGA_AQUI_TU_URL_DE_APPS_SCRIPT",
   };
 
+  // Cascada Región > Supervisor > Tienda, según "Coverage Ventas diarias".
+  const COVERAGE = {
+    "Región Lima - Cleiber Cortez": {
+      "Zona Sur": ["TPF_VILLASALVADOR", "TP_TPF_MALLDELSUR", "TP_TPF_JOCKEYPLAZA", "TP_PLAZAREPUBLICA", "TP_TPF_CHORRILLOS", "TP_LARCO"],
+      "Zona Norte": ["TPF_PUENTEPIEDRA", "TP_TPF_PLIMANORTE", "TP_TPF_MEGAPLAZA", "TP_TPF_COMAS", "TPF_HUACHO28"],
+      "Zona Centro": ["TP_TPF_PLAZASANMIGUEL", "TP_TPF_CENTRODELIMA", "TPF_RPSALAVERRY", "TP_TPF_MINKA2", "TPF_BELLAVISTA"],
+      "Zona Este": ["TP_TPF_OPENANGAMOS", "TP_TPF_SANTAANITA", "TPF_MAPSJLURIGANCHO", "TP_TPF_PURUCHUCO", "TP_SJUANLURIGANCHO"],
+    },
+    "Región Norte - Liliana Bonilla": {
+      "Zona TRUX - CHIM": ["TP_CHIMBOTE", "TPF_TRUJILLO", "TP_TRUJILLO", "TPF_HUARAZ", "TPF_TRUJILLOJUNIN", "TPF_MPCHIMBOTE"],
+      "Zona LAM - CAX": ["TPF_RPCHICLAYO", "TP_CHICLAYO", "TPF_MAPCHICLAYO", "TPF_CAJAMARCA", "TPF_JAEN", "TPF_MPCAJAMARCA"],
+      "Zona PIU - TUM": ["TPF_PIUREAL", "TP_TALARA", "TP_PIURA", "TPF_PAITA2", "TPF_PIURA", "TPF_SULLANA", "TP_TPF_TUMBES"],
+    },
+    "Región Sur - Tephy Diaz": {
+      "Jhon Lopez": ["TP_TPF_CUSCO", "TP_CUSCO"],
+      "Omar Quispe": ["TP_TPF_JULIACA"],
+      "Rene Lopez": ["TPF_AQPPANORAMICO", "TP_TPF_MAPAREQUIPA", "TP_AREQUIPA", "TP_TACNA"],
+    },
+    "Región Centro - Wendy Cawen": {
+      "Sacya Navarro": ["TP_HUANCAYO", "TPF_HUANCAYO"],
+      "Cesar Ching": ["TP_ICA", "TPF_CHINCHAITALIA", "TPF_ICAPISCO"],
+      "Claudia Fajardo": ["TP_TPF_IQUITOS", "TPF_TARAPOTO", "TPF_MOYOBAMBA"],
+      "Sheila Flores": ["TPF_AYACASAMBLEA2"],
+      "Alexander Santiago": ["TPF_HUANUCO", "TPF_PUCALLPA"],
+    },
+  };
+
+  const MARCAS = ["Samsung", "Honor", "Xiaomi", "Zte", "Oppo", "Vivo", "Motorola", "Apple"];
+
+  const CACHE_KEY = "ventasPOS_cache_v3";
+  const POLL_MS = 30000;
+
   const $ = (id) => document.getElementById(id);
-  const modeloSelect = $("modelo");
-  const modeloOtro = $("modeloOtro");
-  const cantidadInput = $("cantidad");
-  const precioInput = $("precio");
+  const regionSelect = $("region");
+  const supervisorSelect = $("supervisor");
+  const tiendaSelect = $("tienda");
+  const brandQtyGrid = $("brandQtyGrid");
   const promotorInput = $("promotor");
   const dateLabel = $("dateLabel");
-  const salesBody = $("salesBody");
+  const daySummaryTable = $("daySummaryTable");
+  const daySummaryBody = $("daySummaryBody");
+  const daySummaryTotal = $("daySummaryTotal");
   const emptyState = $("emptyState");
-  const modelSummaryBody = $("modelSummaryBody");
-  const summaryGrid = $("summaryGrid");
+  const enviarBtn = $("enviarBtn");
+  const syncDot = $("syncDot");
+  const syncLabel = $("syncLabel");
+  const configBanner = $("configBanner");
+  const offlineBanner = $("offlineBanner");
+  const summaryModal = $("summaryModal");
+  const monthStatGrid = $("monthStatGrid");
+  const monthSummaryBody = $("monthSummaryBody");
 
   let currentDate = new Date();
   currentDate.setHours(0, 0, 0, 0);
+  let currentView = "registrar";
+  let dashboardRange = "hoy";
+  let allSales = [];
+
+  function isConfigured() {
+    return !!CONFIG.SHEETS_URL && CONFIG.SHEETS_URL.indexOf("PEGA_AQUI") !== 0;
+  }
+
+  function generateId() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return "id-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+  }
 
   function fmtDateKey(d) {
     const y = d.getFullYear();
@@ -291,8 +529,7 @@
   function fmtDateLabel(d) {
     const opts = { weekday: "long", day: "numeric", month: "long" };
     let label = d.toLocaleDateString("es-ES", opts);
-    label = label.charAt(0).toUpperCase() + label.slice(1);
-    return label;
+    return label.charAt(0).toUpperCase() + label.slice(1);
   }
 
   function isToday(d) {
@@ -301,187 +538,498 @@
     return d.getTime() === t.getTime();
   }
 
-  function storageKey(d) {
-    return `ventasPOS_${fmtDateKey(d)}`;
+  function shortRegion(r) {
+    return (r || "").split(" - ")[0];
   }
 
-  function loadSales() {
-    const raw = localStorage.getItem(storageKey(currentDate));
-    return raw ? JSON.parse(raw) : [];
+  function escapeHtml(str) {
+    return String(str == null ? "" : str).replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    }[c]));
   }
 
-  function saveSales(sales) {
-    localStorage.setItem(storageKey(currentDate), JSON.stringify(sales));
+  function loadCache() {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (err) {
+      return [];
+    }
   }
 
-  function populateModelos() {
-    modeloSelect.innerHTML = "";
-    Object.entries(MODELOS_POR_MARCA).forEach(([marca, modelos]) => {
-      const group = document.createElement("optgroup");
-      group.label = marca;
-      modelos.forEach((m) => {
-        const opt = document.createElement("option");
-        opt.value = m;
-        opt.textContent = m;
-        group.appendChild(opt);
-      });
-      modeloSelect.appendChild(group);
+  function saveCache(sales) {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(sales));
+  }
+
+  function setSyncState(state, label) {
+    syncDot.className = "dot" + (state ? " " + state : "");
+    syncLabel.textContent = label;
+  }
+
+  async function apiGet() {
+    const res = await fetch(CONFIG.SHEETS_URL, { method: "GET" });
+    const json = await res.json();
+    if (!json.ok) throw new Error("Respuesta inválida de Sheets");
+    return json.data;
+  }
+
+  async function apiPost(body) {
+    const res = await fetch(CONFIG.SHEETS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(body),
     });
-    const otro = document.createElement("option");
-    otro.value = "Otro...";
-    otro.textContent = "Otro...";
-    modeloSelect.appendChild(otro);
+    const json = await res.json();
+    if (!json.ok) throw new Error("Respuesta inválida de Sheets");
+    return json;
   }
 
-  function money(n) {
-    return "$" + n.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  async function syncFromSheets(silent) {
+    if (!isConfigured()) {
+      configBanner.style.display = "block";
+      allSales = loadCache();
+      setSyncState("off", "Sin configurar");
+      render();
+      return;
+    }
+    configBanner.style.display = "none";
+    if (!silent) setSyncState("", "Sincronizando…");
+    try {
+      const data = await apiGet();
+      allSales = data;
+      saveCache(data);
+      offlineBanner.style.display = "none";
+      setSyncState("on", "Sincronizado");
+      render();
+    } catch (err) {
+      allSales = loadCache();
+      offlineBanner.style.display = "block";
+      setSyncState("off", "Sin conexión");
+      render();
+    }
+  }
+
+  // --- Cascada Región > Supervisor > Tienda ---
+
+  function resetSelect(sel, placeholder) {
+    sel.innerHTML = `<option value="">${placeholder}</option>`;
+    sel.disabled = true;
+  }
+
+  function populateRegiones() {
+    regionSelect.innerHTML = '<option value="">Selecciona región</option>' +
+      Object.keys(COVERAGE).map((r) => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join("");
+  }
+
+  function populateSupervisores() {
+    const region = regionSelect.value;
+    if (!region) {
+      resetSelect(supervisorSelect, "Selecciona región primero");
+      resetSelect(tiendaSelect, "Selecciona supervisor primero");
+      return;
+    }
+    const supervisores = Object.keys(COVERAGE[region]);
+    supervisorSelect.innerHTML = '<option value="">Selecciona supervisor</option>' +
+      supervisores.map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+    supervisorSelect.disabled = false;
+    resetSelect(tiendaSelect, "Selecciona supervisor primero");
+  }
+
+  function populateTiendas() {
+    const region = regionSelect.value;
+    const supervisor = supervisorSelect.value;
+    if (!region || !supervisor) {
+      resetSelect(tiendaSelect, "Selecciona supervisor primero");
+      return;
+    }
+    const tiendas = COVERAGE[region][supervisor];
+    tiendaSelect.innerHTML = '<option value="">Selecciona tienda</option>' +
+      tiendas.map((t) => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join("");
+    tiendaSelect.disabled = false;
+  }
+
+  function populateBrandQtyGrid() {
+    brandQtyGrid.innerHTML = MARCAS.map((m) => `
+      <div class="brand-qty-item">
+        <label for="qty-${m}">${m}</label>
+        <input type="number" id="qty-${m}" min="0" step="1" placeholder="0" inputmode="numeric">
+      </div>
+    `).join("");
+  }
+
+  function getBrandQuantities() {
+    return MARCAS
+      .map((m) => ({ marca: m, cantidad: Math.max(0, parseInt($("qty-" + m).value, 10) || 0) }))
+      .filter((r) => r.cantidad > 0);
+  }
+
+  function resetBrandQtyGrid() {
+    MARCAS.forEach((m) => { $("qty-" + m).value = ""; });
+  }
+
+  function salesForDay(dateKey) {
+    return allSales.filter((s) => s.fecha === dateKey);
+  }
+
+  function inRange(fecha, range) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (range === "hoy") return fecha === fmtDateKey(today);
+
+    if (range === "semana") {
+      const day = today.getDay(); // 0=domingo..6=sábado
+      const mondayOffset = day === 0 ? 6 : day - 1;
+      const monday = new Date(today);
+      monday.setDate(monday.getDate() - mondayOffset);
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      return fecha >= fmtDateKey(monday) && fecha <= fmtDateKey(sunday);
+    }
+
+    if (range === "mes") {
+      return (fecha || "").slice(0, 7) === fmtDateKey(today).slice(0, 7);
+    }
+
+    return true;
   }
 
   function render() {
-    dateLabel.innerHTML = fmtDateLabel(currentDate) + (isToday(currentDate) ? ' <span class="today-badge">HOY</span>' : "");
-    const sales = loadSales();
+    if (currentView === "registrar") renderRegistrar();
+    else renderDashboard();
+  }
 
-    salesBody.innerHTML = "";
+  function renderRegistrar() {
+    dateLabel.innerHTML = fmtDateLabel(currentDate) + (isToday(currentDate) ? ' <span class="today-badge">HOY</span>' : "");
+    const sales = salesForDay(fmtDateKey(currentDate));
+
     if (sales.length === 0) {
       emptyState.style.display = "block";
-    } else {
-      emptyState.style.display = "none";
-      sales.forEach((s, idx) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${s.hora}</td>
-          <td>${s.modelo}</td>
-          <td class="num">${s.cantidad}</td>
-          <td class="num">${money(s.precio)}</td>
-          <td class="num">${money(s.cantidad * s.precio)}</td>
-          <td><button class="btn btn-danger btn-small" data-idx="${idx}">Borrar</button></td>
-        `;
-        salesBody.appendChild(tr);
-      });
+      daySummaryTable.style.display = "none";
+      return;
     }
+    emptyState.style.display = "none";
+    daySummaryTable.style.display = "table";
 
-    salesBody.querySelectorAll("button[data-idx]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const idx = parseInt(btn.getAttribute("data-idx"), 10);
-        const s = loadSales();
-        s.splice(idx, 1);
-        saveSales(s);
-        render();
-      });
-    });
+    const byMarca = {};
+    MARCAS.forEach((m) => { byMarca[m] = 0; });
+    sales.forEach((s) => { byMarca[s.marca] = (byMarca[s.marca] || 0) + Number(s.cantidad); });
+    const total = Object.values(byMarca).reduce((a, b) => a + b, 0);
 
-    const totalUnidades = sales.reduce((a, s) => a + s.cantidad, 0);
-    const totalDinero = sales.reduce((a, s) => a + s.cantidad * s.precio, 0);
-    const modelosDistintos = new Set(sales.map((s) => s.modelo)).size;
+    daySummaryBody.innerHTML = MARCAS.map((m) => `
+      <tr><td>${escapeHtml(m)}</td><td class="num">${byMarca[m]}</td></tr>
+    `).join("");
+    daySummaryTotal.innerHTML = `<strong>${total}</strong>`;
+  }
 
-    summaryGrid.innerHTML = `
-      <div class="stat accent">
-        <div class="label">Total vendido</div>
-        <div class="value">${money(totalDinero)}</div>
+  function renderDashboard() {
+    const sales = allSales.filter((s) => inRange(s.fecha, dashboardRange));
+
+    const totalUnidades = sales.reduce((a, s) => a + Number(s.cantidad), 0);
+    const honorUnidades = sales.filter((s) => s.marca === "Honor").reduce((a, s) => a + Number(s.cantidad), 0);
+    const honorShare = totalUnidades > 0 ? Math.round((honorUnidades / totalUnidades) * 100) : 0;
+
+    $("dashSummaryGrid").innerHTML = `
+      <div class="stat hero">
+        <div class="label">Ventas Honor</div>
+        <div class="value">${honorUnidades}</div>
       </div>
       <div class="stat">
-        <div class="label">Unidades vendidas</div>
+        <div class="label">Ventas Totales</div>
         <div class="value">${totalUnidades}</div>
       </div>
       <div class="stat">
-        <div class="label">Modelos distintos</div>
-        <div class="value">${modelosDistintos}</div>
-      </div>
-      <div class="stat">
-        <div class="label"># de ventas</div>
-        <div class="value">${sales.length}</div>
+        <div class="label">Share Honor</div>
+        <div class="value">${honorShare}%</div>
       </div>
     `;
 
-    const byModel = {};
-    sales.forEach((s) => {
-      if (!byModel[s.modelo]) byModel[s.modelo] = { unidades: 0, subtotal: 0 };
-      byModel[s.modelo].unidades += s.cantidad;
-      byModel[s.modelo].subtotal += s.cantidad * s.precio;
-    });
-    const rows = Object.entries(byModel).sort((a, b) => b[1].unidades - a[1].unidades);
-    modelSummaryBody.innerHTML = rows.length
-      ? rows.map(([modelo, v]) => `
+    const byMarcaTotal = {};
+    sales.forEach((s) => { byMarcaTotal[s.marca] = (byMarcaTotal[s.marca] || 0) + Number(s.cantidad); });
+    const marcaRanking = Object.entries(byMarcaTotal).sort((a, b) => b[1] - a[1]);
+    $("dashMarcaRankingBody").innerHTML = marcaRanking.length
+      ? marcaRanking.map(([marca, unidades], idx) => `
           <tr>
-            <td>${modelo}</td>
-            <td class="num">${v.unidades}</td>
-            <td class="num">${money(v.subtotal)}</td>
+            <td>${rankBadge(idx)}${escapeHtml(marca)}</td>
+            <td class="num">${unidades}</td>
           </tr>
         `).join("")
-      : `<tr><td colspan="3" class="empty-state">Sin datos aún</td></tr>`;
+      : `<tr><td colspan="2" class="empty-state">Sin datos en este rango</td></tr>`;
+
+    renderHonorDaily();
+    renderBars("dashMarcaBars", sales, (s) => s.marca);
+    renderBars("dashRegionBars", sales, (s) => shortRegion(s.region));
+    renderPromotorByZone(sales);
   }
 
-  modeloSelect.addEventListener("change", () => {
-    modeloOtro.style.display = modeloSelect.value === "Otro..." ? "block" : "none";
-  });
+  function rankBadge(idx) {
+    const rankClass = idx === 0 ? "r1" : idx === 1 ? "r2" : idx === 2 ? "r3" : "";
+    return `<span class="rank-badge ${rankClass}">${idx + 1}</span>`;
+  }
 
-  $("addSale").addEventListener("click", () => {
-    let modelo = modeloSelect.value;
-    if (modelo === "Otro...") {
-      modelo = modeloOtro.value.trim();
-      if (!modelo) {
-        modeloOtro.focus();
-        return;
-      }
-    }
-    const cantidad = parseInt(cantidadInput.value, 10);
-    const precio = parseFloat(precioInput.value) || 0;
-    if (!cantidad || cantidad < 1) {
-      cantidadInput.focus();
+  function renderPromotorByZone(sales) {
+    const byRegion = {};
+    sales.forEach((s) => {
+      const region = shortRegion(s.region) || "—";
+      if (!byRegion[region]) byRegion[region] = {};
+      const key = s.promotor || "—";
+      if (!byRegion[region][key]) byRegion[region][key] = { ventas: 0, unidades: 0 };
+      byRegion[region][key].ventas += 1;
+      byRegion[region][key].unidades += Number(s.cantidad);
+    });
+
+    const regions = Object.keys(byRegion).sort();
+    if (regions.length === 0) {
+      $("dashPromotorByZone").innerHTML = `<div class="empty-state">Sin datos en este rango</div>`;
       return;
     }
 
-    const sales = loadSales();
-    sales.push({
-      modelo,
-      cantidad,
-      precio,
-      hora: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
-    });
-    saveSales(sales);
+    $("dashPromotorByZone").innerHTML = regions.map((region) => {
+      const rows = Object.entries(byRegion[region]).sort((a, b) => b[1].unidades - a[1].unidades);
+      const rowsHtml = rows.map(([nombre, v], idx) => `
+        <tr>
+          <td>${rankBadge(idx)}${escapeHtml(nombre)}</td>
+          <td class="num">${v.ventas}</td>
+          <td class="num">${v.unidades}</td>
+        </tr>
+      `).join("");
+      return `
+        <div class="zone-group">
+          <div class="zone-group-title">${escapeHtml(region)}</div>
+          <table>
+            <thead><tr><th>Promotor</th><th class="num">Ventas</th><th class="num">Unidades</th></tr></thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </div>
+      `;
+    }).join("");
+  }
 
-    cantidadInput.value = 1;
-    precioInput.value = "";
-    modeloOtro.value = "";
-    render();
-  });
-
-  $("clearDay").addEventListener("click", () => {
-    if (confirm("¿Vaciar todas las ventas registradas de este día? Esta acción no se puede deshacer.")) {
-      saveSales([]);
-      render();
+  function lastNDays(n) {
+    const days = [];
+    const base = new Date();
+    base.setHours(0, 0, 0, 0);
+    for (let i = n - 1; i >= 0; i--) {
+      const d = new Date(base);
+      d.setDate(d.getDate() - i);
+      days.push(d);
     }
-  });
+    return days;
+  }
 
-  $("exportCsv").addEventListener("click", () => {
-    const sales = loadSales();
-    if (sales.length === 0) return;
-    const header = "Hora,Modelo,Cantidad,Precio Unitario,Subtotal\n";
-    const rows = sales.map(
-      (s) => `${s.hora},"${s.modelo}",${s.cantidad},${s.precio.toFixed(2)},${(s.cantidad * s.precio).toFixed(2)}`
-    );
-    const csv = header + rows.join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `ventas_${fmtDateKey(currentDate)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  });
+  function renderHonorDaily() {
+    const days = lastNDays(14);
+    const values = days.map((d) => {
+      const key = fmtDateKey(d);
+      return allSales
+        .filter((s) => s.fecha === key && s.marca === "Honor")
+        .reduce((a, s) => a + Number(s.cantidad), 0);
+    });
+    const max = Math.max(1, ...values);
 
-  $("prevDay").addEventListener("click", () => {
-    currentDate.setDate(currentDate.getDate() - 1);
+    const width = 620, height = 160;
+    const padX = 16, padTop = 24, padBottom = 34;
+    const plotW = width - padX * 2;
+    const plotH = height - padTop - padBottom;
+    const stepX = days.length > 1 ? plotW / (days.length - 1) : 0;
+
+    const points = values.map((v, i) => ({
+      x: padX + stepX * i,
+      y: padTop + plotH * (1 - v / max),
+      v,
+    }));
+
+    const linePoints = points.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+    const baseline = (padTop + plotH).toFixed(1);
+    const areaPoints = `${points[0].x.toFixed(1)},${baseline} ${linePoints} ${points[points.length - 1].x.toFixed(1)},${baseline}`;
+
+    const circles = points.map((p) => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="var(--accent)" />`).join("");
+
+    const valueLabels = points.map((p) => p.v > 0
+      ? `<text x="${p.x.toFixed(1)}" y="${(p.y - 8).toFixed(1)}" font-size="9" fill="var(--muted)" text-anchor="middle">${p.v}</text>`
+      : ""
+    ).join("");
+
+    const dateLabels = points.map((p, i) => {
+      const d = days[i];
+      const label = String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0");
+      return `<text x="${p.x.toFixed(1)}" y="${height - 10}" font-size="9" fill="var(--muted)" text-anchor="middle">${label}</text>`;
+    }).join("");
+
+    $("honorDailyChart").innerHTML = `
+      <svg viewBox="0 0 ${width} ${height}" class="line-chart-svg" preserveAspectRatio="none">
+        <polygon points="${areaPoints}" fill="var(--accent-soft)" stroke="none" />
+        <polyline points="${linePoints}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+        ${circles}
+        ${valueLabels}
+        ${dateLabels}
+      </svg>
+    `;
+  }
+
+  function renderBars(containerId, sales, keyFn) {
+    const byKey = {};
+    sales.forEach((s) => {
+      const key = keyFn(s) || "—";
+      byKey[key] = (byKey[key] || 0) + Number(s.cantidad);
+    });
+    const rows = Object.entries(byKey).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    const max = rows.length ? rows[0][1] : 0;
+
+    $(containerId).innerHTML = rows.length
+      ? rows.map(([label, unidades]) => `
+          <div class="bar-row">
+            <div class="name">${escapeHtml(label)}</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${max ? (unidades / max) * 100 : 0}%"></div></div>
+            <div class="amount">${unidades}</div>
+          </div>
+        `).join("")
+      : `<div class="empty-state">Sin datos en este rango</div>`;
+  }
+
+  async function submitDay() {
+    const region = regionSelect.value;
+    const supervisor = supervisorSelect.value;
+    const tienda = tiendaSelect.value;
+    const promotor = promotorInput.value.trim();
+
+    if (!region) { regionSelect.focus(); return; }
+    if (!supervisor) { supervisorSelect.focus(); return; }
+    if (!tienda) { tiendaSelect.focus(); return; }
+
+    const entries = getBrandQuantities();
+    if (entries.length === 0) {
+      alert("Ingresa al menos una cantidad antes de enviar.");
+      return;
+    }
+
+    const totalUnidades = entries.reduce((a, e) => a + e.cantidad, 0);
+    const resumenTexto = entries.map((e) => `${e.marca}: ${e.cantidad}`).join("\n");
+    const confirmMsg = `Vas a registrar estas ventas:\n\nTienda: ${tienda}\nPromotor: ${promotor || "—"}\n\n${resumenTexto}\n\nTotal unidades: ${totalUnidades}\n\n¿Confirmas que los datos son correctos?`;
+    if (!confirm(confirmMsg)) return;
+
+    const fecha = fmtDateKey(currentDate);
+    const hora = new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+    const newSales = entries.map((e) => ({
+      id: generateId(),
+      fecha,
+      hora,
+      region,
+      supervisor,
+      tienda,
+      promotor,
+      marca: e.marca,
+      cantidad: e.cantidad,
+    }));
+
+    allSales = allSales.concat(newSales);
+    saveCache(allSales);
+    resetBrandQtyGrid();
     render();
-  });
-  $("nextDay").addEventListener("click", () => {
-    currentDate.setDate(currentDate.getDate() + 1);
+
+    if (!isConfigured()) return;
+
+    enviarBtn.disabled = true;
+    try {
+      await Promise.all(newSales.map((s) => apiPost(s)));
+      setSyncState("on", "Sincronizado");
+    } catch (err) {
+      const ids = new Set(newSales.map((s) => s.id));
+      allSales = allSales.filter((s) => !ids.has(s.id));
+      saveCache(allSales);
+      render();
+      setSyncState("off", "Sin conexión");
+      alert("No se pudieron guardar las ventas en Google Sheets. Verifica tu conexión e intenta de nuevo.");
+    } finally {
+      enviarBtn.disabled = false;
+    }
+  }
+
+  async function clearDay() {
+    const dateKey = fmtDateKey(currentDate);
+    const dayIds = salesForDay(dateKey).map((s) => s.id);
+    if (dayIds.length === 0) return;
+    if (!confirm("¿Vaciar todas las ventas registradas de este día? Esta acción no se puede deshacer.")) return;
+
+    const backup = allSales;
+    allSales = allSales.filter((s) => s.fecha !== dateKey);
+    saveCache(allSales);
     render();
-  });
-  $("todayBtn").addEventListener("click", () => {
-    currentDate = new Date();
-    currentDate.setHours(0, 0, 0, 0);
+
+    if (!isConfigured()) return;
+
+    try {
+      await Promise.all(dayIds.map((id) => apiPost({ action: "delete", id })));
+    } catch (err) {
+      alert("Algunas ventas no se pudieron borrar en Google Sheets. Actualizando datos...");
+      syncFromSheets();
+    }
+  }
+
+  function openMonthSummary() {
+    const now = new Date();
+    const ym = fmtDateKey(now).slice(0, 7);
+    const monthSales = allSales.filter((s) => (s.fecha || "").slice(0, 7) === ym);
+    const totalUnidades = monthSales.reduce((a, s) => a + Number(s.cantidad), 0);
+
+    const byMarca = {};
+    MARCAS.forEach((m) => { byMarca[m] = 0; });
+    monthSales.forEach((s) => { byMarca[s.marca] = (byMarca[s.marca] || 0) + Number(s.cantidad); });
+
+    let monthLabel = now.toLocaleDateString("es-ES", { month: "long", year: "numeric" });
+    monthLabel = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
+    $("summaryModalTitle").textContent = "Resumen de " + monthLabel;
+
+    monthStatGrid.innerHTML = `
+      <div class="stat hero">
+        <div class="label">Unidades del mes</div>
+        <div class="value">${totalUnidades}</div>
+      </div>
+      <div class="stat">
+        <div class="label"># de registros</div>
+        <div class="value">${monthSales.length}</div>
+      </div>
+    `;
+    monthSummaryBody.innerHTML = MARCAS.map((m) => `
+      <tr><td>${escapeHtml(m)}</td><td class="num">${byMarca[m]}</td></tr>
+    `).join("");
+
+    summaryModal.style.display = "flex";
+  }
+
+  function closeMonthSummary() {
+    summaryModal.style.display = "none";
+  }
+
+  function setView(view) {
+    currentView = view;
+    $("tabRegistrar").classList.toggle("active", view === "registrar");
+    $("tabDashboard").classList.toggle("active", view === "dashboard");
+    $("viewRegistrar").classList.toggle("active", view === "registrar");
+    $("viewDashboard").classList.toggle("active", view === "dashboard");
     render();
+  }
+
+  regionSelect.addEventListener("change", populateSupervisores);
+  supervisorSelect.addEventListener("change", populateTiendas);
+  enviarBtn.addEventListener("click", submitDay);
+  $("clearDay").addEventListener("click", clearDay);
+  $("monthSummaryBtn").addEventListener("click", openMonthSummary);
+  $("closeSummaryModal").addEventListener("click", closeMonthSummary);
+  summaryModal.addEventListener("click", (e) => { if (e.target === summaryModal) closeMonthSummary(); });
+  $("prevDay").addEventListener("click", () => { currentDate.setDate(currentDate.getDate() - 1); render(); });
+  $("nextDay").addEventListener("click", () => { currentDate.setDate(currentDate.getDate() + 1); render(); });
+  $("todayBtn").addEventListener("click", () => { currentDate = new Date(); currentDate.setHours(0, 0, 0, 0); render(); });
+  $("tabRegistrar").addEventListener("click", () => setView("registrar"));
+  $("tabDashboard").addEventListener("click", () => setView("dashboard"));
+  $("refreshBtn").addEventListener("click", () => syncFromSheets());
+  document.querySelectorAll(".range-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      dashboardRange = btn.getAttribute("data-range");
+      document.querySelectorAll(".range-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      render();
+    });
   });
 
   promotorInput.addEventListener("input", () => {
@@ -489,8 +1037,14 @@
   });
   promotorInput.value = localStorage.getItem("ventasPOS_promotor") || "";
 
-  populateModelos();
+  resetSelect(supervisorSelect, "Selecciona región primero");
+  resetSelect(tiendaSelect, "Selecciona supervisor primero");
+  populateRegiones();
+  populateBrandQtyGrid();
+  allSales = loadCache();
   render();
+  syncFromSheets();
+  setInterval(() => syncFromSheets(true), POLL_MS);
 })();
 </script>
 </body>

@@ -1,23 +1,23 @@
 # Ventas del Día — Punto de Venta
 
-Aplicación web simple para registrar las ventas diarias de smartphones en un punto de venta. Corre completamente en el navegador, sin servidor ni instalación: basta con abrir `index.html`.
+Aplicación web para que un equipo de promotores registre ventas diarias de smartphones y el dueño vea todo centralizado en un dashboard. Corre completamente en el navegador (sin build ni backend propio): basta con abrir `index.html`. Los datos se sincronizan en una Google Sheet compartida.
 
 ## Funcionalidades
 
-- Registro de ventas por modelo de smartphone (marca, modelo, cantidad y precio unitario), con soporte para modelos personalizados vía la opción "Otro...".
-- Navegación entre días (día anterior / siguiente / hoy) para consultar el historial de ventas.
-- Resumen del día: total vendido, unidades vendidas, modelos distintos y número de ventas.
-- Resumen agrupado por modelo con unidades y subtotal.
-- Exportación del detalle de ventas del día a CSV.
-- Opción para vaciar todas las ventas de un día.
+- Registro de cierre de día: cascada **Región → Supervisor → Tienda** (según la tabla Coverage Ventas diarias), nombre del promotor (se autocompleta desde el 2do registro) y un grid con la cantidad vendida de cada **Marca** (Samsung, Honor, Xiaomi, Zte, Oppo, Vivo, Motorola, Apple). Se llena una sola vez al final del día y se registra todo junto con el botón **Enviar**, que pide confirmación antes de guardar.
+- Navegación entre días (día anterior / siguiente / hoy): muestra el resumen de unidades vendidas por marca de ese día.
+- Botón **Resumen**: muestra las unidades acumuladas del mes en curso, por marca.
+- **Dashboard** con resumen agregado (unidades vendidas, # de ventas, promotores activos, regiones activas), gráfico diario de ventas de Honor (últimos 14 días), ventas por marca, ventas por región y ranking de promotores — filtrable por Hoy / 7 días / 30 días / Todo.
+- Sincronización con Google Sheets: todos los promotores registran desde su propio dispositivo y los datos quedan centralizados. Se actualiza automáticamente cada 30 segundos.
+- Modo sin conexión: si Sheets no está configurado o falla la red, la app sigue funcionando con una copia local en el navegador.
 
 ## Uso
 
-1. Abre `index.html` en cualquier navegador moderno.
-2. Escribe el nombre del promotor (se guarda automáticamente).
-3. Selecciona el modelo, cantidad y precio unitario, y presiona **Agregar venta**.
-4. Consulta el resumen del día o exporta el detalle a CSV con el botón correspondiente.
+1. Configura el backend siguiendo [`SETUP_SHEETS.md`](SETUP_SHEETS.md) (una vez, 5 minutos).
+2. Comparte `index.html` (idealmente publicado, ver más abajo) con tus promotores.
+3. Al final del día, cada promotor elige región, supervisor y tienda, escribe su nombre, ingresa cuántas unidades vendió de cada marca, y presiona **Enviar** (confirmando el resumen antes de registrar).
+4. Entra a la pestaña **Dashboard** para ver el consolidado de todo el equipo.
 
 ## Almacenamiento de datos
 
-Los datos se guardan en el `localStorage` del navegador, separados por día. No se envían a ningún servidor, por lo que solo están disponibles en el navegador y equipo donde se registraron.
+Los datos se guardan en una Google Sheet compartida (ver [`SETUP_SHEETS.md`](SETUP_SHEETS.md) y [`google-apps-script/Code.gs`](google-apps-script/Code.gs)). El navegador guarda además una copia local (`localStorage`) como respaldo para seguir funcionando sin conexión.
