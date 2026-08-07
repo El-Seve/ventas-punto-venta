@@ -31,19 +31,22 @@ function doGet(e) {
   return jsonOutput_({ ok: true, data: data });
 }
 
-// Google Sheets a veces auto-convierte texto tipo "2026-08-06" o "14:35"
-// a su propio tipo Date internamente. Normalizamos al leer para que el
-// front-end siempre reciba el mismo formato de string sin importar cómo
-// quedó guardada la celda.
+// Salvavidas por si alguna celda vieja quedó guardada como fecha real de
+// Sheets (de antes de forzar las columnas C y D a texto plano). Para datos
+// nuevos esto ya no debería activarse: ver ensurePlainTextColumns_().
+function isDateValue_(v) {
+  return !!v && typeof v.getTime === 'function' && !isNaN(v.getTime()) && typeof v.getFullYear === 'function';
+}
+
 function formatFecha_(v) {
-  if (v instanceof Date) {
+  if (isDateValue_(v)) {
     return Utilities.formatDate(v, Session.getScriptTimeZone(), 'yyyy-MM-dd');
   }
   return v;
 }
 
 function formatHora_(v) {
-  if (v instanceof Date) {
+  if (isDateValue_(v)) {
     return Utilities.formatDate(v, Session.getScriptTimeZone(), 'HH:mm');
   }
   return v;
@@ -91,7 +94,17 @@ function getSheet_() {
     sheet = ss.insertSheet(SHEET_NAME);
     sheet.appendRow(HEADERS);
   }
+  ensurePlainTextColumns_(sheet);
   return sheet;
+}
+
+// La causa real del bug de fecha/hora: Sheets auto-convierte texto tipo
+// "2026-08-06" o "14:35" a su propio tipo de fecha/hora AL ESCRIBIR la
+// celda, no al leerla. Forzamos las columnas Fecha (C) y Hora (D) a texto
+// plano para que eso nunca vuelva a pasar con datos nuevos.
+function ensurePlainTextColumns_(sheet) {
+  const numRows = Math.max(sheet.getMaxRows(), 1000);
+  sheet.getRange(1, 3, numRows, 2).setNumberFormat('@');
 }
 
 function jsonOutput_(obj) {
