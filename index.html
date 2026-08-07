@@ -139,7 +139,7 @@
   }
   input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
   input::placeholder { color: #a1a1aa; }
-  select:disabled { background: var(--surface-2); color: var(--muted); cursor: not-allowed; }
+  select:disabled, input:disabled { background: var(--surface-2); color: var(--muted); cursor: not-allowed; }
 
   .date-nav {
     display: flex;
@@ -335,6 +335,8 @@
     <div class="card">
       <h2>Registrar venta del día</h2>
 
+      <div id="lockBanner" class="banner warn" style="display:none;"></div>
+
       <div class="form-grid cols-3">
         <div class="field">
           <label for="region">Región</label>
@@ -388,7 +390,6 @@
       <div class="toolbar">
         <button class="btn btn-secondary btn-small" id="shareWhatsappBtn">📲 Compartir por WhatsApp</button>
         <button class="btn btn-secondary btn-small" id="monthSummaryBtn">Resumen</button>
-        <button class="btn btn-danger btn-small" id="clearDay">Vaciar día</button>
       </div>
     </div>
   </div>
@@ -497,6 +498,7 @@
   const daySummaryTotal = $("daySummaryTotal");
   const emptyState = $("emptyState");
   const enviarBtn = $("enviarBtn");
+  const lockBanner = $("lockBanner");
   const syncDot = $("syncDot");
   const syncLabel = $("syncLabel");
   const configBanner = $("configBanner");
@@ -581,7 +583,7 @@
       body: JSON.stringify(body),
     });
     const json = await res.json();
-    if (!json.ok) throw new Error("Respuesta inválida de Sheets");
+    if (!json.ok) throw new Error(json.error || "Respuesta inválida de Sheets");
     return json;
   }
 
@@ -591,6 +593,7 @@
       allSales = loadCache();
       setSyncState("off", "Sin configurar");
       render();
+      updateFormLock();
       return;
     }
     configBanner.style.display = "none";
@@ -602,11 +605,13 @@
       offlineBanner.style.display = "none";
       setSyncState("on", "Sincronizado");
       render();
+      updateFormLock();
     } catch (err) {
       allSales = loadCache();
       offlineBanner.style.display = "block";
       setSyncState("off", "Sin conexión");
       render();
+      updateFormLock();
     }
   }
 
@@ -627,6 +632,7 @@
     if (!region) {
       resetSelect(supervisorSelect, "Selecciona región primero");
       resetSelect(tiendaSelect, "Selecciona supervisor primero");
+      updateFormLock();
       return;
     }
     const supervisores = Object.keys(COVERAGE[region]);
@@ -634,6 +640,7 @@
       supervisores.map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
     supervisorSelect.disabled = false;
     resetSelect(tiendaSelect, "Selecciona supervisor primero");
+    updateFormLock();
   }
 
   function populateTiendas() {
@@ -641,12 +648,14 @@
     const supervisor = supervisorSelect.value;
     if (!region || !supervisor) {
       resetSelect(tiendaSelect, "Selecciona supervisor primero");
+      updateFormLock();
       return;
     }
     const tiendas = COVERAGE[region][supervisor];
     tiendaSelect.innerHTML = '<option value="">Selecciona tienda</option>' +
       tiendas.map((t) => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join("");
     tiendaSelect.disabled = false;
+    updateFormLock();
   }
 
   function populateBrandQtyGrid() {
@@ -670,6 +679,44 @@
 
   function salesForDay(dateKey) {
     return allSales.filter((s) => s.fecha === dateKey);
+  }
+
+  // Una tienda solo puede registrarse para hoy, o para ayer si ayer se
+  // quedó sin registrar (día de gracia). Cualquier otro día queda cerrado
+  // a nuevos envíos, y una tienda que ya tiene registro en un día no
+  // admite otro (lo registrado no se puede modificar).
+  function isDayEligible(date) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime() === today.getTime() || d.getTime() === yesterday.getTime();
+  }
+
+  function tiendaHasRecord(tienda, fecha) {
+    return allSales.some((s) => s.tienda === tienda && s.fecha === fecha);
+  }
+
+  function updateFormLock() {
+    const tienda = tiendaSelect.value;
+    const fecha = fmtDateKey(currentDate);
+    let locked = false;
+    let message = "";
+
+    if (!isDayEligible(currentDate)) {
+      locked = true;
+      message = "⚠️ Este día ya no admite registros nuevos. Solo se puede registrar para hoy o, si falta, para ayer.";
+    } else if (tienda && tiendaHasRecord(tienda, fecha)) {
+      locked = true;
+      message = "⚠️ Ya se registró la venta de esta tienda para este día. El registro no se puede modificar.";
+    }
+
+    lockBanner.style.display = locked ? "block" : "none";
+    lockBanner.textContent = message;
+    MARCAS.forEach((m) => { $("qty-" + m).disabled = locked; });
+    enviarBtn.disabled = locked;
   }
 
   function inRange(fecha, range) {
@@ -898,6 +945,17 @@
     if (!supervisor) { supervisorSelect.focus(); return; }
     if (!tienda) { tiendaSelect.focus(); return; }
 
+    const fecha = fmtDateKey(currentDate);
+
+    if (!isDayEligible(currentDate)) {
+      alert("Este día ya no admite registros nuevos. Solo se puede registrar para hoy o, si falta, para ayer.");
+      return;
+    }
+    if (tiendaHasRecord(tienda, fecha)) {
+      alert("Ya se registró la venta de esta tienda para este día. El registro no se puede modificar.");
+      return;
+    }
+
     const entries = getBrandQuantities();
     if (entries.length === 0) {
       alert("Ingresa al menos una cantidad antes de enviar.");
@@ -906,10 +964,9 @@
 
     const totalUnidades = entries.reduce((a, e) => a + e.cantidad, 0);
     const resumenTexto = entries.map((e) => `${e.marca}: ${e.cantidad}`).join("\n");
-    const confirmMsg = `Vas a registrar estas ventas:\n\nTienda: ${tienda}\nPromotor: ${promotor || "—"}\n\n${resumenTexto}\n\nTotal unidades: ${totalUnidades}\n\n¿Confirmas que los datos son correctos?`;
+    const confirmMsg = `Vas a registrar estas ventas:\n\nTienda: ${tienda}\nPromotor: ${promotor || "—"}\n\n${resumenTexto}\n\nTotal unidades: ${totalUnidades}\n\nUna vez enviado, este registro no se podrá modificar. ¿Confirmas que los datos son correctos?`;
     if (!confirm(confirmMsg)) return;
 
-    const fecha = fmtDateKey(currentDate);
     const hora = new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
     const newSales = entries.map((e) => ({
       id: generateId(),
@@ -927,43 +984,27 @@
     saveCache(allSales);
     resetBrandQtyGrid();
     render();
+    updateFormLock();
 
     if (!isConfigured()) return;
 
     enviarBtn.disabled = true;
     try {
-      await Promise.all(newSales.map((s) => apiPost(s)));
+      await apiPost({
+        fecha, hora, region, supervisor, tienda, promotor,
+        items: newSales.map((s) => ({ id: s.id, marca: s.marca, cantidad: s.cantidad })),
+      });
       setSyncState("on", "Sincronizado");
     } catch (err) {
       const ids = new Set(newSales.map((s) => s.id));
       allSales = allSales.filter((s) => !ids.has(s.id));
       saveCache(allSales);
       render();
+      updateFormLock();
       setSyncState("off", "Sin conexión");
-      alert("No se pudieron guardar las ventas en Google Sheets. Verifica tu conexión e intenta de nuevo.");
+      alert(err.message || "No se pudieron guardar las ventas en Google Sheets. Verifica tu conexión e intenta de nuevo.");
     } finally {
       enviarBtn.disabled = false;
-    }
-  }
-
-  async function clearDay() {
-    const dateKey = fmtDateKey(currentDate);
-    const dayIds = salesForDay(dateKey).map((s) => s.id);
-    if (dayIds.length === 0) return;
-    if (!confirm("¿Vaciar todas las ventas registradas de este día? Esta acción no se puede deshacer.")) return;
-
-    const backup = allSales;
-    allSales = allSales.filter((s) => s.fecha !== dateKey);
-    saveCache(allSales);
-    render();
-
-    if (!isConfigured()) return;
-
-    try {
-      await Promise.all(dayIds.map((id) => apiPost({ action: "delete", id })));
-    } catch (err) {
-      alert("Algunas ventas no se pudieron borrar en Google Sheets. Actualizando datos...");
-      syncFromSheets();
     }
   }
 
@@ -1041,15 +1082,15 @@
 
   regionSelect.addEventListener("change", populateSupervisores);
   supervisorSelect.addEventListener("change", populateTiendas);
+  tiendaSelect.addEventListener("change", updateFormLock);
   enviarBtn.addEventListener("click", submitDay);
-  $("clearDay").addEventListener("click", clearDay);
   $("monthSummaryBtn").addEventListener("click", openMonthSummary);
   $("shareWhatsappBtn").addEventListener("click", shareWhatsapp);
   $("closeSummaryModal").addEventListener("click", closeMonthSummary);
   summaryModal.addEventListener("click", (e) => { if (e.target === summaryModal) closeMonthSummary(); });
-  $("prevDay").addEventListener("click", () => { currentDate.setDate(currentDate.getDate() - 1); render(); });
-  $("nextDay").addEventListener("click", () => { currentDate.setDate(currentDate.getDate() + 1); render(); });
-  $("todayBtn").addEventListener("click", () => { currentDate = new Date(); currentDate.setHours(0, 0, 0, 0); render(); });
+  $("prevDay").addEventListener("click", () => { currentDate.setDate(currentDate.getDate() - 1); render(); updateFormLock(); });
+  $("nextDay").addEventListener("click", () => { currentDate.setDate(currentDate.getDate() + 1); render(); updateFormLock(); });
+  $("todayBtn").addEventListener("click", () => { currentDate = new Date(); currentDate.setHours(0, 0, 0, 0); render(); updateFormLock(); });
   $("tabRegistrar").addEventListener("click", () => setView("registrar"));
   $("tabDashboard").addEventListener("click", () => setView("dashboard"));
   $("refreshBtn").addEventListener("click", () => syncFromSheets());
@@ -1073,6 +1114,7 @@
   populateBrandQtyGrid();
   allSales = loadCache();
   render();
+  updateFormLock();
   syncFromSheets();
   setInterval(() => syncFromSheets(true), POLL_MS);
 })();

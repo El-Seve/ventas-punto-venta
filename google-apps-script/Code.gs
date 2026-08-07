@@ -60,20 +60,41 @@ function doPost(e) {
     return deleteRow_(sheet, body.id);
   }
 
-  const cantidad = Number(body.cantidad) || 0;
-  sheet.appendRow([
-    body.id,
-    new Date(),
-    body.fecha,
-    body.hora,
-    body.region || '',
-    body.supervisor || '',
-    body.tienda || '',
-    body.promotor || '',
-    body.marca,
-    cantidad,
-  ]);
+  if (!body.items || !body.items.length) {
+    return jsonOutput_({ ok: false, error: 'Sin datos para registrar.' });
+  }
+
+  // Una vez que una tienda tiene un cierre registrado para una fecha, ese
+  // registro es definitivo: no se acepta un segundo envío para la misma
+  // combinación de tienda + fecha (evita modificar lo ya registrado).
+  if (tiendaFechaExiste_(sheet, body.tienda, body.fecha)) {
+    return jsonOutput_({ ok: false, error: 'Ya existe un registro para esta tienda en esta fecha. No se puede modificar.' });
+  }
+
+  body.items.forEach(function (item) {
+    sheet.appendRow([
+      item.id,
+      new Date(),
+      body.fecha,
+      body.hora,
+      body.region || '',
+      body.supervisor || '',
+      body.tienda || '',
+      body.promotor || '',
+      item.marca,
+      Number(item.cantidad) || 0,
+    ]);
+  });
+
   return jsonOutput_({ ok: true });
+}
+
+function tiendaFechaExiste_(sheet, tienda, fecha) {
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][6] === tienda && rows[i][2] === fecha) return true;
+  }
+  return false;
 }
 
 function deleteRow_(sheet, id) {

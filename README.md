@@ -5,6 +5,7 @@ Aplicación web para que un equipo de promotores registre ventas diarias de smar
 ## Funcionalidades
 
 - Registro de cierre de día: cascada **Región → Supervisor → Tienda** (según la tabla Coverage Ventas diarias), nombre del promotor (se autocompleta desde el 2do registro) y un grid con la cantidad vendida de cada **Marca** (Samsung, Honor, Xiaomi, Zte, Oppo, Vivo, Motorola, Apple). Se llena una sola vez al final del día y se registra todo junto con el botón **Enviar**, que pide confirmación antes de guardar.
+- **Registros inmutables**: una vez que una tienda tiene un cierre registrado para un día, ese registro queda bloqueado — no se puede volver a enviar ni modificar. Solo se permite registrar para **hoy**, o para **ayer** si ayer se quedó sin registrar (día de gracia).
 - Navegación entre días (día anterior / siguiente / hoy): muestra el resumen de unidades vendidas por marca de ese día.
 - Botón **Resumen**: muestra las unidades acumuladas del mes en curso, por marca.
 - **Dashboard** con resumen agregado (unidades vendidas, # de ventas, promotores activos, regiones activas), gráfico diario de ventas de Honor (últimos 14 días), ventas por marca, ventas por región y ranking de promotores — filtrable por Hoy / 7 días / 30 días / Todo.
