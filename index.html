@@ -386,6 +386,7 @@
       </table>
       <div class="empty-state" id="emptyState" style="display:none;">Aún no hay ventas registradas para este día.</div>
       <div class="toolbar">
+        <button class="btn btn-secondary btn-small" id="shareWhatsappBtn">📲 Compartir por WhatsApp</button>
         <button class="btn btn-secondary btn-small" id="monthSummaryBtn">Resumen</button>
         <button class="btn btn-danger btn-small" id="clearDay">Vaciar día</button>
       </div>
@@ -1001,6 +1002,30 @@
     summaryModal.style.display = "none";
   }
 
+  function shareWhatsapp() {
+    const sales = salesForDay(fmtDateKey(currentDate));
+    if (sales.length === 0) {
+      alert("No hay ventas registradas este día para compartir.");
+      return;
+    }
+
+    const byMarca = {};
+    MARCAS.forEach((m) => { byMarca[m] = 0; });
+    sales.forEach((s) => { byMarca[s.marca] = (byMarca[s.marca] || 0) + Number(s.cantidad); });
+    const total = Object.values(byMarca).reduce((a, b) => a + b, 0);
+
+    const lineas = MARCAS.filter((m) => byMarca[m] > 0).map((m) => `${m}: ${byMarca[m]}`);
+    const texto = [
+      `📱 *Ventas del día* - ${fmtDateLabel(currentDate)}`,
+      "",
+      ...lineas,
+      "",
+      `*Total: ${total} unidades*`,
+    ].join("\n");
+
+    window.open("https://wa.me/?text=" + encodeURIComponent(texto), "_blank");
+  }
+
   function setView(view) {
     currentView = view;
     $("tabRegistrar").classList.toggle("active", view === "registrar");
@@ -1015,6 +1040,7 @@
   enviarBtn.addEventListener("click", submitDay);
   $("clearDay").addEventListener("click", clearDay);
   $("monthSummaryBtn").addEventListener("click", openMonthSummary);
+  $("shareWhatsappBtn").addEventListener("click", shareWhatsapp);
   $("closeSummaryModal").addEventListener("click", closeMonthSummary);
   summaryModal.addEventListener("click", (e) => { if (e.target === summaryModal) closeMonthSummary(); });
   $("prevDay").addEventListener("click", () => { currentDate.setDate(currentDate.getDate() - 1); render(); });
