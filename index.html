@@ -1015,8 +1015,12 @@
     const total = Object.values(byMarca).reduce((a, b) => a + b, 0);
 
     const lineas = MARCAS.filter((m) => byMarca[m] > 0).map((m) => `${m}: ${byMarca[m]}`);
+    const tienda = tiendaSelect.value || "—";
+    const promotor = promotorInput.value.trim() || "—";
     const texto = [
       `📱 *Ventas del día* - ${fmtDateLabel(currentDate)}`,
+      `Tienda: *${tienda}*`,
+      `Promotor: *${promotor}*`,
       "",
       ...lineas,
       "",
