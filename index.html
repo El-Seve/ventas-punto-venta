@@ -871,7 +871,8 @@
     sales.forEach((s) => { byMarca[s.marca] = (byMarca[s.marca] || 0) + Number(s.cantidad); });
     const total = Object.values(byMarca).reduce((a, b) => a + b, 0);
 
-    daySummaryBody.innerHTML = MARCAS.map((m) => {
+    const marcasPorShare = MARCAS.slice().sort((a, b) => byMarca[b] - byMarca[a]);
+    daySummaryBody.innerHTML = marcasPorShare.map((m) => {
       const share = total > 0 ? Math.round((byMarca[m] / total) * 100) : 0;
       return `<tr><td>${escapeHtml(m)}</td><td class="num">${byMarca[m]}</td><td class="num">${share}%</td></tr>`;
     }).join("");
