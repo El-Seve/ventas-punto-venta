@@ -632,7 +632,7 @@
     if (!region) {
       resetSelect(supervisorSelect, "Selecciona región primero");
       resetSelect(tiendaSelect, "Selecciona supervisor primero");
-      updateFormLock();
+      render();
       return;
     }
     const supervisores = Object.keys(COVERAGE[region]);
@@ -640,7 +640,7 @@
       supervisores.map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
     supervisorSelect.disabled = false;
     resetSelect(tiendaSelect, "Selecciona supervisor primero");
-    updateFormLock();
+    render();
   }
 
   function populateTiendas() {
@@ -648,14 +648,14 @@
     const supervisor = supervisorSelect.value;
     if (!region || !supervisor) {
       resetSelect(tiendaSelect, "Selecciona supervisor primero");
-      updateFormLock();
+      render();
       return;
     }
     const tiendas = COVERAGE[region][supervisor];
     tiendaSelect.innerHTML = '<option value="">Selecciona tienda</option>' +
       tiendas.map((t) => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join("");
     tiendaSelect.disabled = false;
-    updateFormLock();
+    render();
   }
 
   function populateBrandQtyGrid() {
@@ -679,6 +679,14 @@
 
   function salesForDay(dateKey) {
     return allSales.filter((s) => s.fecha === dateKey);
+  }
+
+  // El resumen del día y el mensaje de WhatsApp deben mostrar solo lo que
+  // registró la tienda seleccionada, no lo de todas las tiendas que hayan
+  // enviado su cierre ese mismo día (el sheet es compartido por todo el
+  // equipo).
+  function salesForTiendaDay(tienda, dateKey) {
+    return allSales.filter((s) => s.tienda === tienda && s.fecha === dateKey);
   }
 
   // Una tienda solo puede registrarse para hoy, o para ayer si ayer se
@@ -749,9 +757,20 @@
 
   function renderRegistrar() {
     dateLabel.innerHTML = fmtDateLabel(currentDate) + (isToday(currentDate) ? ' <span class="today-badge">HOY</span>' : "");
-    const sales = salesForDay(fmtDateKey(currentDate));
+    updateFormLock();
+
+    const tienda = tiendaSelect.value;
+    if (!tienda) {
+      emptyState.textContent = "Selecciona tu tienda para ver el resumen del día.";
+      emptyState.style.display = "block";
+      daySummaryTable.style.display = "none";
+      return;
+    }
+
+    const sales = salesForTiendaDay(tienda, fmtDateKey(currentDate));
 
     if (sales.length === 0) {
+      emptyState.textContent = "Aún no hay ventas registradas para este día.";
       emptyState.style.display = "block";
       daySummaryTable.style.display = "none";
       return;
@@ -1044,7 +1063,13 @@
   }
 
   function shareWhatsapp() {
-    const sales = salesForDay(fmtDateKey(currentDate));
+    const tienda = tiendaSelect.value;
+    if (!tienda) {
+      alert("Selecciona tu tienda para compartir su resumen.");
+      return;
+    }
+
+    const sales = salesForTiendaDay(tienda, fmtDateKey(currentDate));
     if (sales.length === 0) {
       alert("No hay ventas registradas este día para compartir.");
       return;
@@ -1056,8 +1081,7 @@
     const total = Object.values(byMarca).reduce((a, b) => a + b, 0);
 
     const lineas = MARCAS.filter((m) => byMarca[m] > 0).map((m) => `${m}: ${byMarca[m]}`);
-    const tienda = tiendaSelect.value || "—";
-    const promotor = promotorInput.value.trim() || "—";
+    const promotor = sales[0].promotor || promotorInput.value.trim() || "—";
     const texto = [
       `📱 *Ventas del día* - ${fmtDateLabel(currentDate)}`,
       `Tienda: *${tienda}*`,
@@ -1082,15 +1106,15 @@
 
   regionSelect.addEventListener("change", populateSupervisores);
   supervisorSelect.addEventListener("change", populateTiendas);
-  tiendaSelect.addEventListener("change", updateFormLock);
+  tiendaSelect.addEventListener("change", render);
   enviarBtn.addEventListener("click", submitDay);
   $("monthSummaryBtn").addEventListener("click", openMonthSummary);
   $("shareWhatsappBtn").addEventListener("click", shareWhatsapp);
   $("closeSummaryModal").addEventListener("click", closeMonthSummary);
   summaryModal.addEventListener("click", (e) => { if (e.target === summaryModal) closeMonthSummary(); });
-  $("prevDay").addEventListener("click", () => { currentDate.setDate(currentDate.getDate() - 1); render(); updateFormLock(); });
-  $("nextDay").addEventListener("click", () => { currentDate.setDate(currentDate.getDate() + 1); render(); updateFormLock(); });
-  $("todayBtn").addEventListener("click", () => { currentDate = new Date(); currentDate.setHours(0, 0, 0, 0); render(); updateFormLock(); });
+  $("prevDay").addEventListener("click", () => { currentDate.setDate(currentDate.getDate() - 1); render(); });
+  $("nextDay").addEventListener("click", () => { currentDate.setDate(currentDate.getDate() + 1); render(); });
+  $("todayBtn").addEventListener("click", () => { currentDate = new Date(); currentDate.setHours(0, 0, 0, 0); render(); });
   $("tabRegistrar").addEventListener("click", () => setView("registrar"));
   $("tabDashboard").addEventListener("click", () => setView("dashboard"));
   $("refreshBtn").addEventListener("click", () => syncFromSheets());
