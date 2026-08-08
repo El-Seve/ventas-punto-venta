@@ -376,7 +376,7 @@
         <button id="nextDay" title="Día siguiente">▶</button>
         <button id="todayBtn">Hoy</button>
       </div>
-      <h2>Resumen del día</h2>
+      <h2>Resumen del día <span id="daySummaryScope" style="text-transform:none; font-weight:400;"></span></h2>
       <table id="daySummaryTable">
         <thead>
           <tr><th>Marca</th><th class="num">Unidades</th></tr>
@@ -494,6 +494,7 @@
   const promotorInput = $("promotor");
   const dateLabel = $("dateLabel");
   const daySummaryTable = $("daySummaryTable");
+  const daySummaryScope = $("daySummaryScope");
   const daySummaryBody = $("daySummaryBody");
   const daySummaryTotal = $("daySummaryTotal");
   const emptyState = $("emptyState");
@@ -689,6 +690,35 @@
     return allSales.filter((s) => s.tienda === tienda && s.fecha === dateKey);
   }
 
+  // El "Resumen del día" se va acotando a medida que se elige cada nivel
+  // de la cascada: con solo la región elegida muestra toda la región, al
+  // sumar el supervisor lo acota a esa zona, y al elegir la tienda queda
+  // acotado a esa tienda sola. Nunca muestra el total de todo el equipo
+  // sin haber elegido al menos una región.
+  function daySummaryScopeInfo() {
+    const region = regionSelect.value;
+    const supervisor = supervisorSelect.value;
+    const tienda = tiendaSelect.value;
+    const dateKey = fmtDateKey(currentDate);
+
+    if (tienda) {
+      return { label: tienda, sales: salesForTiendaDay(tienda, dateKey) };
+    }
+    if (supervisor) {
+      return {
+        label: supervisor,
+        sales: allSales.filter((s) => s.region === region && s.supervisor === supervisor && s.fecha === dateKey),
+      };
+    }
+    if (region) {
+      return {
+        label: shortRegion(region),
+        sales: allSales.filter((s) => s.region === region && s.fecha === dateKey),
+      };
+    }
+    return null;
+  }
+
   // Una tienda solo puede registrarse para hoy, o para ayer si ayer se
   // quedó sin registrar (día de gracia). Cualquier otro día queda cerrado
   // a nuevos envíos, y una tienda que ya tiene registro en un día no
@@ -759,15 +789,17 @@
     dateLabel.innerHTML = fmtDateLabel(currentDate) + (isToday(currentDate) ? ' <span class="today-badge">HOY</span>' : "");
     updateFormLock();
 
-    const tienda = tiendaSelect.value;
-    if (!tienda) {
-      emptyState.textContent = "Selecciona tu tienda para ver el resumen del día.";
+    const scope = daySummaryScopeInfo();
+    if (!scope) {
+      daySummaryScope.textContent = "";
+      emptyState.textContent = "Selecciona una región para ver el resumen del día.";
       emptyState.style.display = "block";
       daySummaryTable.style.display = "none";
       return;
     }
 
-    const sales = salesForTiendaDay(tienda, fmtDateKey(currentDate));
+    daySummaryScope.textContent = "— " + scope.label;
+    const sales = scope.sales;
 
     if (sales.length === 0) {
       emptyState.textContent = "Aún no hay ventas registradas para este día.";
