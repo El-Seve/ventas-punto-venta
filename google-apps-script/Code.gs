@@ -8,6 +8,9 @@
 const SHEET_NAME = 'Ventas';
 const HEADERS = ['ID', 'Timestamp', 'Fecha', 'Hora', 'Región', 'Supervisor', 'Tienda', 'Promotor', 'Marca', 'Cantidad'];
 
+const JUSTIF_SHEET_NAME = 'Justificaciones';
+const JUSTIF_HEADERS = ['ID', 'Timestamp', 'Fecha', 'Región', 'Supervisor', 'Tienda', 'Motivo', 'Comentario'];
+
 function doGet(e) {
   const sheet = getSheet_();
   const rows = sheet.getDataRange().getValues();
@@ -28,7 +31,26 @@ function doGet(e) {
         cantidad: r[9],
       };
     });
-  return jsonOutput_({ ok: true, data: data });
+
+  const justifSheet = getJustifSheet_();
+  const jrows = justifSheet.getDataRange().getValues();
+  jrows.shift();
+  const justificaciones = jrows
+    .filter(function (r) { return r[0]; })
+    .map(function (r) {
+      return {
+        id: r[0],
+        timestamp: r[1],
+        fecha: formatFecha_(r[2]),
+        region: r[3],
+        supervisor: r[4],
+        tienda: r[5],
+        motivo: r[6],
+        comentario: r[7],
+      };
+    });
+
+  return jsonOutput_({ ok: true, data: data, justificaciones: justificaciones });
 }
 
 // Salvavidas por si alguna celda vieja quedó guardada como fecha real de
@@ -54,11 +76,16 @@ function formatHora_(v) {
 
 function doPost(e) {
   const body = JSON.parse(e.postData.contents);
-  const sheet = getSheet_();
 
   if (body.action === 'delete') {
-    return deleteRow_(sheet, body.id);
+    return deleteRow_(getSheet_(), body.id);
   }
+
+  if (body.action === 'justificar') {
+    return saveJustificacion_(body);
+  }
+
+  const sheet = getSheet_();
 
   if (!body.items || !body.items.length) {
     return jsonOutput_({ ok: false, error: 'Sin datos para registrar.' });
@@ -69,6 +96,11 @@ function doPost(e) {
   // combinación de tienda + fecha (evita modificar lo ya registrado).
   if (tiendaFechaExiste_(sheet, body.tienda, body.fecha)) {
     return jsonOutput_({ ok: false, error: 'Ya existe un registro para esta tienda en esta fecha. No se puede modificar.' });
+  }
+  // Tampoco se puede registrar venta si esa tienda+fecha ya tiene un motivo
+  // de no cierre justificado (vacaciones, descanso, etc.).
+  if (justificacionExiste_(getJustifSheet_(), body.tienda, body.fecha)) {
+    return jsonOutput_({ ok: false, error: 'Esta tienda tiene un motivo registrado para esta fecha. No se puede registrar venta.' });
   }
 
   body.items.forEach(function (item) {
@@ -97,6 +129,46 @@ function tiendaFechaExiste_(sheet, tienda, fecha) {
   return false;
 }
 
+// Registra el motivo por el que una tienda no hizo su cierre (vacaciones,
+// descanso semanal, descanso médico, otros). Lo marca el supervisor o
+// gerencia al revisar la lista de tiendas faltantes, no el promotor.
+function saveJustificacion_(body) {
+  if (!body.tienda || !body.fecha || !body.motivo) {
+    return jsonOutput_({ ok: false, error: 'Faltan datos para registrar el motivo.' });
+  }
+
+  const ventasSheet = getSheet_();
+  const justifSheet = getJustifSheet_();
+
+  if (tiendaFechaExiste_(ventasSheet, body.tienda, body.fecha)) {
+    return jsonOutput_({ ok: false, error: 'Esta tienda ya registró ventas para esta fecha.' });
+  }
+  if (justificacionExiste_(justifSheet, body.tienda, body.fecha)) {
+    return jsonOutput_({ ok: false, error: 'Ya existe un motivo registrado para esta tienda en esta fecha.' });
+  }
+
+  justifSheet.appendRow([
+    body.id || Utilities.getUuid(),
+    new Date(),
+    body.fecha,
+    body.region || '',
+    body.supervisor || '',
+    body.tienda,
+    body.motivo,
+    body.comentario || '',
+  ]);
+
+  return jsonOutput_({ ok: true });
+}
+
+function justificacionExiste_(sheet, tienda, fecha) {
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][5] === tienda && formatFecha_(rows[i][2]) === fecha) return true;
+  }
+  return false;
+}
+
 function deleteRow_(sheet, id) {
   const rows = sheet.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
@@ -116,6 +188,19 @@ function getSheet_() {
     sheet.appendRow(HEADERS);
   }
   ensurePlainTextColumns_(sheet);
+  return sheet;
+}
+
+function getJustifSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(JUSTIF_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(JUSTIF_SHEET_NAME);
+    sheet.appendRow(JUSTIF_HEADERS);
+  }
+  // Misma corrección que en la hoja de Ventas: forzar la columna Fecha (C)
+  // a texto plano para que Sheets no la reconvierta a su tipo Date interno.
+  sheet.getRange(1, 3, Math.max(sheet.getMaxRows(), 1000), 1).setNumberFormat('@');
   return sheet;
 }
 
@@ -208,6 +293,14 @@ function generateMissingPdvReport() {
     if (r[0] && formatFecha_(r[2]) === fecha) submitted[r[6]] = true;
   });
 
+  const justifSheet = getJustifSheet_();
+  const jrows = justifSheet.getDataRange().getValues();
+  jrows.shift();
+  const motivos = {};
+  jrows.forEach(function (r) {
+    if (r[0] && formatFecha_(r[2]) === fecha) motivos[r[5]] = r[6];
+  });
+
   const allTiendas = [];
   Object.keys(COVERAGE).forEach(function (region) {
     Object.keys(COVERAGE[region]).forEach(function (supervisor) {
@@ -217,14 +310,18 @@ function generateMissingPdvReport() {
     });
   });
 
-  const missing = allTiendas.filter(function (t) { return !submitted[t.tienda]; });
+  const missing = allTiendas
+    .filter(function (t) { return !submitted[t.tienda]; })
+    .map(function (t) { return Object.assign({}, t, { motivo: motivos[t.tienda] || '' }); });
+
+  const sinMotivo = missing.filter(function (m) { return !m.motivo; }).length;
 
   const blob = buildMissingPdvExcel_(fecha, missing);
 
   const body = [
     'Reporte de tiendas (PDVs) que no registraron su cierre de ventas del ' + fecha + '.',
     '',
-    missing.length + ' de ' + allTiendas.length + ' tiendas sin registrar.',
+    missing.length + ' de ' + allTiendas.length + ' tiendas sin registrar (' + sinMotivo + ' sin motivo justificado).',
     '',
     'Detalle en el Excel adjunto.',
   ].join('\n');
@@ -241,15 +338,15 @@ function buildMissingPdvExcel_(fecha, missing) {
   const temp = SpreadsheetApp.create('Reporte_PDVs_Faltantes_' + fecha);
   const sheet = temp.getSheets()[0];
   sheet.setName('PDVs sin registrar');
-  sheet.appendRow(['Región', 'Supervisor', 'Tienda']);
-  sheet.getRange(1, 1, 1, 3).setFontWeight('bold');
+  sheet.appendRow(['Región', 'Supervisor', 'Tienda', 'Motivo']);
+  sheet.getRange(1, 1, 1, 4).setFontWeight('bold');
   missing.forEach(function (m) {
-    sheet.appendRow([m.region, m.supervisor, m.tienda]);
+    sheet.appendRow([m.region, m.supervisor, m.tienda, m.motivo]);
   });
   if (missing.length === 0) {
-    sheet.appendRow(['Todas las tiendas registraron su cierre.', '', '']);
+    sheet.appendRow(['Todas las tiendas registraron su cierre.', '', '', '']);
   }
-  sheet.autoResizeColumns(1, 3);
+  sheet.autoResizeColumns(1, 4);
   SpreadsheetApp.flush();
 
   const url = 'https://docs.google.com/spreadsheets/d/' + temp.getId() + '/export?format=xlsx';

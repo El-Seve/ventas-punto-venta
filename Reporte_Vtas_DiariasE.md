@@ -17,7 +17,8 @@ Se construyó una aplicación web (**"Ventas del Día"**) para que los promotore
 - **Backend en Google Sheets** (Apps Script): `doGet`/`doPost`, normalización de fecha/hora (bug de auto-conversión de Sheets resuelto forzando columnas a texto plano), validación de duplicados atómica del lado del servidor.
 - **Reporte diario automático de PDVs faltantes**: trigger de Apps Script que corre todos los días a las 9:00am, compara la cobertura completa contra lo registrado el día anterior, genera un Excel y lo envía por correo a `ivan.severinos@gmail.com` con el asunto *"Reporte de Ventas - Tiendas Faltantes"*. **Confirmado en producción**: el trigger quedó activado y el primer correo automático llegó correctamente.
 - **Tiendas sin registrar en el Resumen del día**: al elegir Región o Supervisor (no aplica a nivel Tienda individual), debajo del resumen se listan en píldoras las tiendas de ese scope que todavía no enviaron su cierre para el día que se está viendo, con conteo `(faltantes de total)`.
-- **Columna Share de Marca**: la tabla de Resumen del día ahora muestra, junto a las unidades por marca, el % que representa cada marca sobre el total del día (fila Total en 100%).
+- **Columna Share de Marca**: la tabla de Resumen del día ahora muestra, junto a las unidades por marca, el % que representa cada marca sobre el total del día (fila Total en 100%), ordenada siempre de mayor a menor.
+- **Motivo de no cierre (Vacaciones / Descanso Semanal / Descanso Médico / Otros)**: el supervisor o gerencia puede hacer clic sobre cualquier tienda de la lista roja "Tiendas sin registrar" y marcarle un motivo desde un modal. La tienda pasa a mostrarse aparte (píldora gris con el motivo) en vez de figurar como faltante real. Se guarda en una hoja nueva de Sheets (`Justificaciones`), separada de `Ventas` para no ensuciar los cálculos de unidades/share. El reporte diario por correo también suma una columna **Motivo** al Excel.
 - **Guía visual de usuario**: infografía tipo "ticket de cierre de caja", con los colores de marca reales de Entel Perú (`#002EFF` / `#42E8B4`) y Honor (`#00B1FF → #FF00D0`), exportada como Artifact web, PNG y PDF para compartir por WhatsApp.
 - **Distribución**: app publicada en GitHub Pages, con link corto personalizado (`tinyurl.com/cierre-ventas-diarias`) tras descartar `is.gd` (rechaza dominios `*.github.io`).
 
@@ -54,6 +55,9 @@ Se construyó una aplicación web (**"Ventas del Día"**) para que los promotore
 | Reporte diario de PDVs faltantes vía trigger nativo de Apps Script (no cron externo) | Aviso automático de tiendas sin registrar, por correo, sin depender de que alguien abra la app | Requiere que el usuario ejecute `setupDailyTrigger()` **una sola vez**, manualmente, desde el editor de Apps Script, para autorizar permisos y activar el disparador. **Confirmado**: trigger activo y correo recibido correctamente |
 | "Tiendas sin registrar" solo se muestra a nivel Región o Supervisor, no a nivel Tienda | A nivel Tienda ya existe el mensaje "Aún no hay ventas registradas para este día"; repetir la lista de faltantes ahí sería redundante (una sola tienda) | La cascada reutiliza `COVERAGE` (misma fuente que el resumen del día) para listar las tiendas del scope elegido y compara contra `tiendaHasRecord()` |
 | Columna Share de Marca agregada solo en la tabla de Resumen del día (no en Resumen mensual ni Dashboard) | Los dos pendientes priorizados por el usuario apuntaban al mismo bloque de "Resumen del día"; se mantiene el cambio acotado a ese componente | Si se pide luego en Resumen mensual o en el ranking del Dashboard, es la misma fórmula (`unidades marca / total del scope`) aplicada a otra tabla |
+| Motivo de no cierre lo marca el supervisor/gerencia "después" (no el promotor en el momento) | Decisión explícita del usuario: en vacaciones o descanso médico el promotor no puede entrar a la app ese día, así que quien revisa la lista de faltantes es quien debe poder justificarlas | La UI de justificar vive junto a la lista "Tiendas sin registrar" (clic en la píldora roja), no en el flujo de registro de ventas del promotor |
+| Justificaciones en una hoja de Sheets separada (`Justificaciones`), no mezcladas con `Ventas` | Una justificación no es una venta; mezclarlas en la misma hoja hubiera obligado a filtrar marcas "falsas" en cada cálculo de unidades/ranking/share | Nuevo endpoint `action: 'justificar'` en `doPost`; `doGet` ahora devuelve `data` (ventas) y `justificaciones` por separado |
+| Tienda+fecha con venta O con motivo son mutuamente excluyentes (igual que el candado de inmutabilidad) | Evitar que una tienda quede con ambos registros a la vez, lo cual no tiene sentido de negocio | Validado en cliente (`updateFormLock`, botón "Enviar" bloqueado) y en servidor (`saveJustificacion_` y `doPost` se chequean cruzado) |
 
 ---
 
@@ -71,6 +75,17 @@ Se construyó una aplicación web (**"Ventas del Día"**) para que los promotore
 1. **Tiendas sin registrar en el Resumen del día**, según lo elegido (Región/Supervisor) — implementado en `index.html`: nueva función `tiendasEnScope()` (reutiliza `COVERAGE`) + `renderMissingStores()`, con lista de píldoras y conteo. Probado en navegador contra datos reales de Sheets en los 3 niveles de la cascada (región, supervisor, tienda) — a nivel tienda no se muestra (redundante con el mensaje de "sin ventas registradas").
 2. **Columna Share de Marca** en la tabla de Resumen del día — cada fila de marca muestra su % sobre el total del día, y la fila Total muestra 100%. Probado contra datos reales (ej. Región Sur, 7 de agosto: Samsung 23%, Honor 24%, Xiaomi 24%, etc.).
 
-**Estado:** ambos cambios están en `index.html`, listos para publicar a GitHub Pages (no requieren cambios en `Code.gs` — se calculan en el cliente a partir de los datos ya sincronizados).
+**Estado:** ambos cambios están en `index.html`, publicados en GitHub Pages (no requerían cambios en `Code.gs` — se calculan en el cliente a partir de los datos ya sincronizados).
 
-**Siguiente paso sugerido:** hacer commit + push de `index.html` a `main` para que se reflejen en `https://el-seve.github.io/ventas-punto-venta/`, y validar con el equipo de promotores que la lista de tiendas faltantes y el share se vean bien en campo (mobile).
+### ⚠️ Pendiente de acción manual: Motivo de no cierre (Vacaciones / Descansos / Otros)
+
+**Qué se hizo:** se agregó la función completa (front-end en `index.html` + backend en `Code.gs`, hoja nueva `Justificaciones`, columna Motivo en el reporte diario). Probado en navegador contra el backend viejo: la píldora abre el modal, el campo de detalle aparece solo con "Otros", y el rollback ante un backend desactualizado funcionó como se esperaba.
+
+**Por qué es el siguiente paso:** `Code.gs` no se redespliega solo con el push a GitHub — el Web App de Apps Script sigue corriendo la versión anterior hasta que se publique manualmente una nueva versión.
+
+**Criterios de aceptación:**
+- [ ] En el editor de Apps Script (Extensiones > Apps Script de la Google Sheet), el contenido de `Code.gs` fue reemplazado por la versión actualizada del repo.
+- [ ] Se hizo **Desplegar > Administrar implementaciones** → lápiz ✏️ → **Nueva versión** → Desplegar.
+- [ ] Al abrir la app y hacer clic en una tienda de la lista roja "Tiendas sin registrar", elegir un motivo y guardar, la tienda pasa a la píldora gris con el motivo (sin error de "Sin datos para registrar").
+- [ ] En la Google Sheet aparece una pestaña nueva **Justificaciones** con la fila guardada.
+- [ ] Al día siguiente, el correo de "Tiendas Faltantes" incluye la columna **Motivo** en el Excel adjunto para las tiendas justificadas.

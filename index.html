@@ -285,7 +285,17 @@
     border-radius: 999px;
     padding: 4px 10px;
     display: inline-block;
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
   }
+  .missing-pill:hover { opacity: 0.75; }
+  .missing-pill.justified {
+    background: var(--surface-2);
+    color: var(--muted);
+    cursor: default;
+  }
+  .missing-pill.justified:hover { opacity: 1; }
 
   .rank-badge {
     display: inline-block;
@@ -423,6 +433,30 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="justifyModal" style="display:none;">
+    <div class="modal-card">
+      <button class="modal-close" id="closeJustifyModal" aria-label="Cerrar">✕</button>
+      <h2>Marcar motivo — <span id="justifyTiendaLabel"></span></h2>
+      <div class="field" style="margin-bottom:12px;">
+        <label for="justifyMotivo">Motivo</label>
+        <select id="justifyMotivo">
+          <option value="">Selecciona un motivo</option>
+          <option value="Vacaciones">Vacaciones</option>
+          <option value="Descanso Semanal">Descanso Semanal</option>
+          <option value="Descanso Médico">Descanso Médico</option>
+          <option value="Otros">Otros</option>
+        </select>
+      </div>
+      <div class="field" id="justifyComentarioField" style="margin-bottom:16px; display:none;">
+        <label for="justifyComentario">Detalle</label>
+        <input type="text" id="justifyComentario" placeholder="Describe el motivo">
+      </div>
+      <div class="toolbar" style="justify-content:flex-end;">
+        <button class="btn" id="saveJustifyBtn">Guardar motivo</button>
+      </div>
+    </div>
+  </div>
+
   <!-- VISTA: DASHBOARD -->
   <div class="view" id="viewDashboard">
     <div class="range-bar">
@@ -499,8 +533,9 @@
   };
 
   const MARCAS = ["Samsung", "Honor", "Xiaomi", "Zte", "Oppo", "Vivo", "Motorola", "Apple"];
+  const MOTIVOS = ["Vacaciones", "Descanso Semanal", "Descanso Médico", "Otros"];
 
-  const CACHE_KEY = "ventasPOS_cache_v3";
+  const CACHE_KEY = "ventasPOS_cache_v4";
   const POLL_MS = 30000;
 
   const $ = (id) => document.getElementById(id);
@@ -524,12 +559,21 @@
   const summaryModal = $("summaryModal");
   const monthStatGrid = $("monthStatGrid");
   const monthSummaryBody = $("monthSummaryBody");
+  const justifyModal = $("justifyModal");
+  const justifyTiendaLabel = $("justifyTiendaLabel");
+  const justifyMotivoSelect = $("justifyMotivo");
+  const justifyComentarioField = $("justifyComentarioField");
+  const justifyComentarioInput = $("justifyComentario");
+  const missingStoresList = $("missingStoresList");
 
   let currentDate = new Date();
   currentDate.setHours(0, 0, 0, 0);
   let currentView = "registrar";
   let dashboardRange = "hoy";
   let allSales = [];
+  let allJustificaciones = [];
+  let justifyTienda = null;
+  let justifySupervisor = null;
 
   function isConfigured() {
     return !!CONFIG.SHEETS_URL && CONFIG.SHEETS_URL.indexOf("PEGA_AQUI") !== 0;
@@ -572,14 +616,15 @@
   function loadCache() {
     try {
       const raw = localStorage.getItem(CACHE_KEY);
-      return raw ? JSON.parse(raw) : [];
+      const parsed = raw ? JSON.parse(raw) : {};
+      return { sales: parsed.sales || [], justificaciones: parsed.justificaciones || [] };
     } catch (err) {
-      return [];
+      return { sales: [], justificaciones: [] };
     }
   }
 
-  function saveCache(sales) {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(sales));
+  function saveCache() {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ sales: allSales, justificaciones: allJustificaciones }));
   }
 
   function setSyncState(state, label) {
@@ -591,7 +636,7 @@
     const res = await fetch(CONFIG.SHEETS_URL, { method: "GET" });
     const json = await res.json();
     if (!json.ok) throw new Error("Respuesta inválida de Sheets");
-    return json.data;
+    return { sales: json.data, justificaciones: json.justificaciones || [] };
   }
 
   async function apiPost(body) {
@@ -608,7 +653,9 @@
   async function syncFromSheets(silent) {
     if (!isConfigured()) {
       configBanner.style.display = "block";
-      allSales = loadCache();
+      const cache = loadCache();
+      allSales = cache.sales;
+      allJustificaciones = cache.justificaciones;
       setSyncState("off", "Sin configurar");
       render();
       updateFormLock();
@@ -617,15 +664,18 @@
     configBanner.style.display = "none";
     if (!silent) setSyncState("", "Sincronizando…");
     try {
-      const data = await apiGet();
-      allSales = data;
-      saveCache(data);
+      const result = await apiGet();
+      allSales = result.sales;
+      allJustificaciones = result.justificaciones;
+      saveCache();
       offlineBanner.style.display = "none";
       setSyncState("on", "Sincronizado");
       render();
       updateFormLock();
     } catch (err) {
-      allSales = loadCache();
+      const cache = loadCache();
+      allSales = cache.sales;
+      allJustificaciones = cache.justificaciones;
       offlineBanner.style.display = "block";
       setSyncState("off", "Sin conexión");
       render();
@@ -754,6 +804,24 @@
     return allSales.some((s) => s.tienda === tienda && s.fecha === fecha);
   }
 
+  // Motivo de no cierre (vacaciones, descanso, etc.) que un supervisor o
+  // gerencia marca para una tienda+fecha que no va a registrar ventas.
+  function tiendaHasJustificacion(tienda, fecha) {
+    return allJustificaciones.some((j) => j.tienda === tienda && j.fecha === fecha);
+  }
+
+  function getJustificacion(tienda, fecha) {
+    return allJustificaciones.find((j) => j.tienda === tienda && j.fecha === fecha) || null;
+  }
+
+  function findSupervisorForTienda(region, tienda) {
+    const supervisores = COVERAGE[region] || {};
+    for (const sup in supervisores) {
+      if (supervisores[sup].includes(tienda)) return sup;
+    }
+    return "";
+  }
+
   // Todas las tiendas que caen dentro de lo elegido en la cascada: si solo
   // hay región, todas las tiendas de la región; si hay supervisor, las de
   // esa zona; si hay tienda, esa sola (no aplica "faltantes" a ese nivel).
@@ -768,7 +836,9 @@
   }
 
   // Lista, dentro del scope elegido (región o supervisor), qué tiendas
-  // todavía no registraron su cierre para el día que se está viendo.
+  // todavía no registraron su cierre para el día que se está viendo. Las
+  // que ya tienen un motivo justificado se muestran aparte (no en rojo) y
+  // no se pueden volver a clickear.
   function renderMissingStores(dateKey) {
     const missingBox = $("missingStoresBox");
     const tienda = tiendaSelect.value;
@@ -779,15 +849,92 @@
       return;
     }
 
-    const faltantes = scopeTiendas.filter((t) => !tiendaHasRecord(t, dateKey));
-    if (faltantes.length === 0) {
+    const region = regionSelect.value;
+    const supervisor = supervisorSelect.value;
+    const sinRegistrar = [];
+    const conMotivo = [];
+    scopeTiendas.forEach((t) => {
+      if (tiendaHasRecord(t, dateKey)) return;
+      const j = getJustificacion(t, dateKey);
+      if (j) conMotivo.push({ tienda: t, motivo: j.motivo });
+      else sinRegistrar.push(t);
+    });
+
+    if (sinRegistrar.length === 0 && conMotivo.length === 0) {
       missingBox.style.display = "none";
       return;
     }
 
     missingBox.style.display = "block";
-    $("missingStoresCount").textContent = `(${faltantes.length} de ${scopeTiendas.length})`;
-    $("missingStoresList").innerHTML = faltantes.map((t) => `<span class="missing-pill">${escapeHtml(t)}</span>`).join("");
+    $("missingStoresCount").textContent = `(${sinRegistrar.length + conMotivo.length} de ${scopeTiendas.length})`;
+    missingStoresList.innerHTML =
+      sinRegistrar.map((t) => {
+        const sup = supervisor || findSupervisorForTienda(region, t);
+        return `<button type="button" class="missing-pill" data-tienda="${escapeHtml(t)}" data-supervisor="${escapeHtml(sup)}" title="Marcar motivo">${escapeHtml(t)}</button>`;
+      }).join("") +
+      conMotivo.map(({ tienda: t, motivo }) => `<span class="missing-pill justified">${escapeHtml(t)} — ${escapeHtml(motivo)}</span>`).join("");
+  }
+
+  function openJustifyModal(tienda, supervisor) {
+    justifyTienda = tienda;
+    justifySupervisor = supervisor;
+    justifyTiendaLabel.textContent = tienda;
+    justifyMotivoSelect.value = "";
+    justifyComentarioInput.value = "";
+    justifyComentarioField.style.display = "none";
+    justifyModal.style.display = "flex";
+  }
+
+  function closeJustifyModal() {
+    justifyModal.style.display = "none";
+    justifyTienda = null;
+    justifySupervisor = null;
+  }
+
+  async function saveJustificacion() {
+    const motivo = justifyMotivoSelect.value;
+    if (!motivo) { alert("Selecciona un motivo."); return; }
+    const comentario = justifyComentarioInput.value.trim();
+    if (motivo === "Otros" && !comentario) {
+      alert("Escribe un detalle para el motivo 'Otros'.");
+      return;
+    }
+
+    const fecha = fmtDateKey(currentDate);
+    if (tiendaHasRecord(justifyTienda, fecha) || tiendaHasJustificacion(justifyTienda, fecha)) {
+      alert("Esta tienda ya tiene un registro para este día.");
+      closeJustifyModal();
+      render();
+      return;
+    }
+
+    const entry = {
+      id: generateId(),
+      fecha,
+      region: regionSelect.value,
+      supervisor: justifySupervisor || "",
+      tienda: justifyTienda,
+      motivo,
+      comentario,
+    };
+
+    allJustificaciones = allJustificaciones.concat(entry);
+    saveCache();
+    closeJustifyModal();
+    render();
+
+    if (!isConfigured()) return;
+
+    try {
+      await apiPost({ action: "justificar", ...entry });
+      setSyncState("on", "Sincronizado");
+    } catch (err) {
+      allJustificaciones = allJustificaciones.filter((j) => j.id !== entry.id);
+      saveCache();
+      render();
+      setSyncState("off", "Sin conexión");
+      alert(err.message || "No se pudo guardar el motivo. Intenta de nuevo.");
+    }
   }
 
   function updateFormLock() {
@@ -802,6 +949,10 @@
     } else if (tienda && tiendaHasRecord(tienda, fecha)) {
       locked = true;
       message = "⚠️ Ya se registró la venta de esta tienda para este día. El registro no se puede modificar.";
+    } else if (tienda && tiendaHasJustificacion(tienda, fecha)) {
+      const j = getJustificacion(tienda, fecha);
+      locked = true;
+      message = `⚠️ Esta tienda tiene un motivo registrado para este día (${j.motivo}). No se puede registrar venta.`;
     }
 
     lockBanner.style.display = locked ? "block" : "none";
@@ -1064,6 +1215,11 @@
       alert("Ya se registró la venta de esta tienda para este día. El registro no se puede modificar.");
       return;
     }
+    if (tiendaHasJustificacion(tienda, fecha)) {
+      const j = getJustificacion(tienda, fecha);
+      alert(`Esta tienda tiene un motivo registrado para este día (${j.motivo}). No se puede registrar venta.`);
+      return;
+    }
 
     const entries = getBrandQuantities();
     if (entries.length === 0) {
@@ -1090,7 +1246,7 @@
     }));
 
     allSales = allSales.concat(newSales);
-    saveCache(allSales);
+    saveCache();
     resetBrandQtyGrid();
     render();
     updateFormLock();
@@ -1107,7 +1263,7 @@
     } catch (err) {
       const ids = new Set(newSales.map((s) => s.id));
       allSales = allSales.filter((s) => !ids.has(s.id));
-      saveCache(allSales);
+      saveCache();
       render();
       updateFormLock();
       setSyncState("off", "Sin conexión");
@@ -1202,6 +1358,17 @@
   $("shareWhatsappBtn").addEventListener("click", shareWhatsapp);
   $("closeSummaryModal").addEventListener("click", closeMonthSummary);
   summaryModal.addEventListener("click", (e) => { if (e.target === summaryModal) closeMonthSummary(); });
+  missingStoresList.addEventListener("click", (e) => {
+    const pill = e.target.closest(".missing-pill:not(.justified)");
+    if (!pill) return;
+    openJustifyModal(pill.getAttribute("data-tienda"), pill.getAttribute("data-supervisor"));
+  });
+  justifyMotivoSelect.addEventListener("change", () => {
+    justifyComentarioField.style.display = justifyMotivoSelect.value === "Otros" ? "block" : "none";
+  });
+  $("saveJustifyBtn").addEventListener("click", saveJustificacion);
+  $("closeJustifyModal").addEventListener("click", closeJustifyModal);
+  justifyModal.addEventListener("click", (e) => { if (e.target === justifyModal) closeJustifyModal(); });
   $("prevDay").addEventListener("click", () => { currentDate.setDate(currentDate.getDate() - 1); render(); });
   $("nextDay").addEventListener("click", () => { currentDate.setDate(currentDate.getDate() + 1); render(); });
   $("todayBtn").addEventListener("click", () => { currentDate = new Date(); currentDate.setHours(0, 0, 0, 0); render(); });
@@ -1226,7 +1393,7 @@
   resetSelect(tiendaSelect, "Selecciona supervisor primero");
   populateRegiones();
   populateBrandQtyGrid();
-  allSales = loadCache();
+  { const cache = loadCache(); allSales = cache.sales; allJustificaciones = cache.justificaciones; }
   render();
   updateFormLock();
   syncFromSheets();
