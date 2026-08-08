@@ -1204,6 +1204,11 @@
     if (!region) { regionSelect.focus(); return; }
     if (!supervisor) { supervisorSelect.focus(); return; }
     if (!tienda) { tiendaSelect.focus(); return; }
+    if (!promotor) {
+      alert("Ingresa el nombre del promotor antes de enviar.");
+      promotorInput.focus();
+      return;
+    }
 
     const fecha = fmtDateKey(currentDate);
 
