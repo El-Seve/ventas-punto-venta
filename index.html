@@ -274,6 +274,19 @@
   .bar-fill { height: 100%; border-radius: 5px; background: var(--accent); }
   .bar-row .amount { font-size: 12px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
 
+  .missing-stores { margin-top: 16px; }
+  .missing-stores-title { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 8px; }
+  .missing-pill-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .missing-pill {
+    font-size: 11px;
+    font-weight: 500;
+    background: var(--danger-soft);
+    color: var(--danger);
+    border-radius: 999px;
+    padding: 4px 10px;
+    display: inline-block;
+  }
+
   .rank-badge {
     display: inline-block;
     width: 20px; height: 20px;
@@ -379,14 +392,18 @@
       <h2>Resumen del día <span id="daySummaryScope" style="text-transform:none; font-weight:400;"></span></h2>
       <table id="daySummaryTable">
         <thead>
-          <tr><th>Marca</th><th class="num">Unidades</th></tr>
+          <tr><th>Marca</th><th class="num">Unidades</th><th class="num">Share</th></tr>
         </thead>
         <tbody id="daySummaryBody"></tbody>
         <tfoot>
-          <tr><td><strong>Total</strong></td><td class="num" id="daySummaryTotal"><strong>0</strong></td></tr>
+          <tr><td><strong>Total</strong></td><td class="num" id="daySummaryTotal"><strong>0</strong></td><td class="num"><strong>100%</strong></td></tr>
         </tfoot>
       </table>
       <div class="empty-state" id="emptyState" style="display:none;">Aún no hay ventas registradas para este día.</div>
+      <div class="missing-stores" id="missingStoresBox" style="display:none;">
+        <div class="missing-stores-title">Tiendas sin registrar <span id="missingStoresCount"></span></div>
+        <div class="missing-pill-list" id="missingStoresList"></div>
+      </div>
       <div class="toolbar">
         <button class="btn btn-secondary btn-small" id="shareWhatsappBtn">📲 Compartir por WhatsApp</button>
         <button class="btn btn-secondary btn-small" id="monthSummaryBtn">Resumen</button>
@@ -737,6 +754,42 @@
     return allSales.some((s) => s.tienda === tienda && s.fecha === fecha);
   }
 
+  // Todas las tiendas que caen dentro de lo elegido en la cascada: si solo
+  // hay región, todas las tiendas de la región; si hay supervisor, las de
+  // esa zona; si hay tienda, esa sola (no aplica "faltantes" a ese nivel).
+  function tiendasEnScope() {
+    const region = regionSelect.value;
+    const supervisor = supervisorSelect.value;
+    const tienda = tiendaSelect.value;
+    if (!region) return [];
+    if (tienda) return [tienda];
+    if (supervisor) return COVERAGE[region][supervisor].slice();
+    return Object.values(COVERAGE[region]).flat();
+  }
+
+  // Lista, dentro del scope elegido (región o supervisor), qué tiendas
+  // todavía no registraron su cierre para el día que se está viendo.
+  function renderMissingStores(dateKey) {
+    const missingBox = $("missingStoresBox");
+    const tienda = tiendaSelect.value;
+    const scopeTiendas = tiendasEnScope();
+
+    if (tienda || scopeTiendas.length === 0) {
+      missingBox.style.display = "none";
+      return;
+    }
+
+    const faltantes = scopeTiendas.filter((t) => !tiendaHasRecord(t, dateKey));
+    if (faltantes.length === 0) {
+      missingBox.style.display = "none";
+      return;
+    }
+
+    missingBox.style.display = "block";
+    $("missingStoresCount").textContent = `(${faltantes.length} de ${scopeTiendas.length})`;
+    $("missingStoresList").innerHTML = faltantes.map((t) => `<span class="missing-pill">${escapeHtml(t)}</span>`).join("");
+  }
+
   function updateFormLock() {
     const tienda = tiendaSelect.value;
     const fecha = fmtDateKey(currentDate);
@@ -789,6 +842,9 @@
     dateLabel.innerHTML = fmtDateLabel(currentDate) + (isToday(currentDate) ? ' <span class="today-badge">HOY</span>' : "");
     updateFormLock();
 
+    const dateKey = fmtDateKey(currentDate);
+    renderMissingStores(dateKey);
+
     const scope = daySummaryScopeInfo();
     if (!scope) {
       daySummaryScope.textContent = "";
@@ -815,9 +871,10 @@
     sales.forEach((s) => { byMarca[s.marca] = (byMarca[s.marca] || 0) + Number(s.cantidad); });
     const total = Object.values(byMarca).reduce((a, b) => a + b, 0);
 
-    daySummaryBody.innerHTML = MARCAS.map((m) => `
-      <tr><td>${escapeHtml(m)}</td><td class="num">${byMarca[m]}</td></tr>
-    `).join("");
+    daySummaryBody.innerHTML = MARCAS.map((m) => {
+      const share = total > 0 ? Math.round((byMarca[m] / total) * 100) : 0;
+      return `<tr><td>${escapeHtml(m)}</td><td class="num">${byMarca[m]}</td><td class="num">${share}%</td></tr>`;
+    }).join("");
     daySummaryTotal.innerHTML = `<strong>${total}</strong>`;
   }
 
