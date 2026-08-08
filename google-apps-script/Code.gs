@@ -132,3 +132,131 @@ function jsonOutput_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
+
+/**
+ * ---------------------------------------------------------------------
+ * Reporte diario de PDVs (tiendas) sin registrar
+ * ---------------------------------------------------------------------
+ * Cada mañana a las 9:00am revisa qué tiendas NO registraron su cierre
+ * el día anterior y manda un Excel por correo con el detalle.
+ *
+ * Para activarlo (una sola vez):
+ * 1. En el editor de Apps Script, selecciona la función "setupDailyTrigger"
+ *    en el desplegable de arriba y presiona "Ejecutar".
+ * 2. Autoriza los permisos que pida (enviar correo y crear triggers).
+ * Con eso queda funcionando solo, todos los días, sin que nadie abra nada.
+ *
+ * IMPORTANTE: este COVERAGE debe coincidir con el de index.html. Si se
+ * agrega una tienda nueva ahí, hay que agregarla acá también.
+ */
+
+const REPORT_EMAIL = 'ivan.severinos@gmail.com';
+
+const COVERAGE = {
+  'Región Lima - Cleiber Cortez': {
+    'Zona Sur': ['TPF_VILLASALVADOR', 'TP_TPF_MALLDELSUR', 'TP_TPF_JOCKEYPLAZA', 'TP_PLAZAREPUBLICA', 'TP_TPF_CHORRILLOS', 'TP_LARCO'],
+    'Zona Norte': ['TPF_PUENTEPIEDRA', 'TP_TPF_PLIMANORTE', 'TP_TPF_MEGAPLAZA', 'TP_TPF_COMAS', 'TPF_HUACHO28'],
+    'Zona Centro': ['TP_TPF_PLAZASANMIGUEL', 'TP_TPF_CENTRODELIMA', 'TPF_RPSALAVERRY', 'TP_TPF_MINKA2', 'TPF_BELLAVISTA'],
+    'Zona Este': ['TP_TPF_OPENANGAMOS', 'TP_TPF_SANTAANITA', 'TPF_MAPSJLURIGANCHO', 'TP_TPF_PURUCHUCO', 'TP_SJUANLURIGANCHO', 'TPF-TC SANTACLARA'],
+  },
+  'Región Norte - Liliana Bonilla': {
+    'Zona TRUX - CHIM': ['TP_CHIMBOTE', 'TPF_TRUJILLO', 'TP_TRUJILLO', 'TPF_HUARAZ', 'TPF_TRUJILLOJUNIN', 'TPF_MPCHIMBOTE'],
+    'Zona LAM - CAX': ['TPF_RPCHICLAYO', 'TP_CHICLAYO', 'TPF_MAPCHICLAYO', 'TPF_CAJAMARCA', 'TPF_JAEN', 'TPF_MPCAJAMARCA'],
+    'Zona PIU - TUM': ['TPF_PIUREAL', 'TP_TALARA', 'TP_PIURA', 'TPF_PAITA2', 'TPF_PIURA', 'TPF_SULLANA', 'TP_TPF_TUMBES'],
+  },
+  'Región Sur - Tephy Diaz': {
+    'Jhon Lopez': ['TP_TPF_CUSCO', 'TP_CUSCO'],
+    'Omar Quispe': ['TP_TPF_JULIACA'],
+    'Rene Lopez': ['TPF_AQPPANORAMICO', 'TP_TPF_MAPAREQUIPA', 'TP_AREQUIPA', 'TP_TACNA'],
+  },
+  'Región Centro - Wendy Cawen': {
+    'Sacya Navarro': ['TP_HUANCAYO', 'TPF_HUANCAYO'],
+    'Cesar Ching': ['TP_ICA', 'TPF_CHINCHAITALIA', 'TPF_ICAPISCO'],
+    'Claudia Fajardo': ['TP_TPF_IQUITOS', 'TPF_TARAPOTO', 'TPF_MOYOBAMBA'],
+    'Sheila Flores': ['TPF_AYACASAMBLEA2'],
+    'Alexander Santiago': ['TPF_HUANUCO', 'TPF_PUCALLPA'],
+  },
+};
+
+function setupDailyTrigger() {
+  existingReportTriggers_().forEach(function (t) { ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('generateMissingPdvReport')
+    .timeBased()
+    .everyDays(1)
+    .atHour(9)
+    .create();
+}
+
+function existingReportTriggers_() {
+  return ScriptApp.getProjectTriggers().filter(function (t) {
+    return t.getHandlerFunction() === 'generateMissingPdvReport';
+  });
+}
+
+function generateMissingPdvReport() {
+  const tz = Session.getScriptTimeZone();
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const fecha = Utilities.formatDate(yesterday, tz, 'yyyy-MM-dd');
+
+  const sheet = getSheet_();
+  const rows = sheet.getDataRange().getValues();
+  rows.shift();
+
+  const submitted = {};
+  rows.forEach(function (r) {
+    if (r[0] && formatFecha_(r[2]) === fecha) submitted[r[6]] = true;
+  });
+
+  const allTiendas = [];
+  Object.keys(COVERAGE).forEach(function (region) {
+    Object.keys(COVERAGE[region]).forEach(function (supervisor) {
+      COVERAGE[region][supervisor].forEach(function (tienda) {
+        allTiendas.push({ region: region, supervisor: supervisor, tienda: tienda });
+      });
+    });
+  });
+
+  const missing = allTiendas.filter(function (t) { return !submitted[t.tienda]; });
+
+  const blob = buildMissingPdvExcel_(fecha, missing);
+
+  const body = [
+    'Reporte de tiendas (PDVs) que no registraron su cierre de ventas del ' + fecha + '.',
+    '',
+    missing.length + ' de ' + allTiendas.length + ' tiendas sin registrar.',
+    '',
+    'Detalle en el Excel adjunto.',
+  ].join('\n');
+
+  MailApp.sendEmail({
+    to: REPORT_EMAIL,
+    subject: 'Reporte de Ventas - Tiendas Faltantes',
+    body: body,
+    attachments: [blob],
+  });
+}
+
+function buildMissingPdvExcel_(fecha, missing) {
+  const temp = SpreadsheetApp.create('Reporte_PDVs_Faltantes_' + fecha);
+  const sheet = temp.getSheets()[0];
+  sheet.setName('PDVs sin registrar');
+  sheet.appendRow(['Región', 'Supervisor', 'Tienda']);
+  sheet.getRange(1, 1, 1, 3).setFontWeight('bold');
+  missing.forEach(function (m) {
+    sheet.appendRow([m.region, m.supervisor, m.tienda]);
+  });
+  if (missing.length === 0) {
+    sheet.appendRow(['Todas las tiendas registraron su cierre.', '', '']);
+  }
+  sheet.autoResizeColumns(1, 3);
+  SpreadsheetApp.flush();
+
+  const url = 'https://docs.google.com/spreadsheets/d/' + temp.getId() + '/export?format=xlsx';
+  const blob = UrlFetchApp.fetch(url, {
+    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+  }).getBlob().setName('PDVs_sin_registrar_' + fecha + '.xlsx');
+
+  DriveApp.getFileById(temp.getId()).setTrashed(true);
+  return blob;
+}

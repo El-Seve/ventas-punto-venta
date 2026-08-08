@@ -37,3 +37,18 @@ Si vuelves a `google-apps-script/Code.gs` para cambiar algo, no basta con guarda
 ## ⚠️ Nota de seguridad
 
 Esta URL queda visible en el código fuente de la página (cualquiera que la use puede verla en las herramientas de desarrollador del navegador) y con acceso "Cualquier usuario" acepta escrituras de quien la tenga, sin autenticación. Es un esquema adecuado para un equipo pequeño y de confianza (tus promotores), **no** para una app pública o con datos sensibles. Si más adelante necesitas control de acceso real, el siguiente paso sería un backend propio con autenticación.
+
+## Reporte diario de tiendas (PDVs) sin registrar
+
+El script incluye un reporte automático: todos los días a las 9:00am revisa qué tiendas **no** registraron su cierre del día anterior, arma un Excel con el detalle y lo manda por correo.
+
+**Activarlo (una sola vez):**
+
+1. En el editor de Apps Script, en el desplegable de funciones (arriba, junto a "Depurar"), elige **`setupDailyTrigger`**.
+2. Presiona **Ejecutar**.
+3. Te va a pedir autorizar permisos (enviar correo, crear archivos temporales en Drive, programar disparadores) — acepta todos, son necesarios para armar y enviar el Excel.
+4. Listo. Corre solo, todos los días, sin que nadie tenga que abrir nada.
+
+**Configurar el correo destino:** cambia el valor de `REPORT_EMAIL` al inicio del bloque de reporte en `Code.gs`, y vuelve a guardar (no hace falta redesplegar el Web App para esto, solo guardar el script).
+
+**Importante:** la lista de tiendas (`COVERAGE`) está duplicada en `Code.gs` porque el reporte corre del lado del servidor. Si agregas una tienda nueva, debe actualizarse en **ambos** archivos: `index.html` y `google-apps-script/Code.gs`.
