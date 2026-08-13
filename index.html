@@ -174,6 +174,7 @@
 
   .form-grid { display: grid; gap: 10px; align-items: end; }
   .form-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .form-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
   .form-grid.cols-1 { grid-template-columns: 1fr; }
   .field label { display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 5px; }
 
@@ -321,7 +322,7 @@
   .view.active { display: block; }
 
   @media (max-width: 640px) {
-    .form-grid.cols-3 { grid-template-columns: 1fr; }
+    .form-grid.cols-3, .form-grid.cols-4 { grid-template-columns: 1fr; }
     .brand-qty-grid { grid-template-columns: repeat(2, 1fr); }
     header { flex-direction: column; }
   }
@@ -360,7 +361,7 @@
 
       <div id="lockBanner" class="banner warn" style="display:none;"></div>
 
-      <div class="form-grid cols-3">
+      <div class="form-grid cols-4">
         <div class="field">
           <label for="region">Región</label>
           <select id="region"></select>
@@ -370,7 +371,11 @@
           <select id="supervisor" disabled></select>
         </div>
         <div class="field">
-          <label for="tienda">Tienda</label>
+          <label for="cobertura">Cobertura</label>
+          <select id="cobertura" disabled></select>
+        </div>
+        <div class="field">
+          <label for="tienda">Punto de Venta</label>
           <select id="tienda" disabled></select>
         </div>
       </div>
@@ -505,40 +510,99 @@
     SHEETS_URL: "https://script.google.com/macros/s/AKfycbza9kDf4jE8BGCgWOeN_sZdJq0kmLCE_ppZ9vuaQhHT9_irWD2j2ZOT2fk5BHMxxj1qvg/exec",
   };
 
-  // Cascada Región > Zona > Punto de Venta, según "Coberturas Entel.xlsx".
-  // Cada Punto de Venta puede ser una Tienda fija o una Ruta (promotor
-  // viajero); ambas se registran igual en la app.
+  // Cascada Región > Zona > Cobertura > Punto de Venta, según "Coberturas
+  // Entel.xlsx". Cobertura distingue Tiendas (puntos fijos) de Rutas
+  // (promotor viajero); ambas se registran igual en la app.
   const COVERAGE = {
     "Región Lima": {
-      "Zona Norte": ["RUTA COMAS PRO", "RUTA HUACHO - HUARAL", "RUTA MEGA PLAZA", "RUTA PLAZA NORTE", "RUTA PUENTE PIEDRA", "TP HUACHO", "TP MEGAPLAZA", "TP PLIMA NORTE", "TP PUENTE PIEDRA", "TPF COMAS"],
-      "Zona Sur": ["RUTA ATOCONGO", "RUTA MALL DEL SUR", "RUTA VES", "TP_CHORRILLOS", "TP_JOCKEY", "TP_LARCO", "TP_MALLDELSUR", "TP_REPÚBLICA", "TP_VILLAELSALVADOR"],
-      "Zona Este": ["RUTA SANTA ANITA - PURUCHUCO", "RUTA SJL 1", "RUTA SJL 2", "TPF ANGAMOS", "TPF MAP SJL", "TPF PURUCHUCO", "TPF SANTA ANITA", "TPF SANTA CLARA", "TPF SJL"],
-      "Zona Centro": ["RUTA CALLAO", "RUTA CENTRO CIVICO", "TP_BELLAVISTA", "TP_CENTRO CIVICO", "TP_MINKA", "TP_SALAVERRY", "TP_SAN MIGUEL"],
+      "Zona Norte": {
+        "Rutas": ["RUTA COMAS PRO", "RUTA HUACHO - HUARAL", "RUTA MEGA PLAZA", "RUTA PLAZA NORTE", "RUTA PUENTE PIEDRA"],
+        "Tiendas": ["TP HUACHO", "TP MEGAPLAZA", "TP PLIMA NORTE", "TP PUENTE PIEDRA", "TPF COMAS"],
+      },
+      "Zona Sur": {
+        "Rutas": ["RUTA ATOCONGO", "RUTA MALL DEL SUR", "RUTA VES"],
+        "Tiendas": ["TP_CHORRILLOS", "TP_JOCKEY", "TP_LARCO", "TP_MALLDELSUR", "TP_REPÚBLICA", "TP_VILLAELSALVADOR"],
+      },
+      "Zona Este": {
+        "Rutas": ["RUTA SANTA ANITA - PURUCHUCO", "RUTA SJL 1", "RUTA SJL 2"],
+        "Tiendas": ["TPF ANGAMOS", "TPF MAP SJL", "TPF PURUCHUCO", "TPF SANTA ANITA", "TPF SANTA CLARA", "TPF SJL"],
+      },
+      "Zona Centro": {
+        "Rutas": ["RUTA CALLAO", "RUTA CENTRO CIVICO"],
+        "Tiendas": ["TP_BELLAVISTA", "TP_CENTRO CIVICO", "TP_MINKA", "TP_SALAVERRY", "TP_SAN MIGUEL"],
+      },
     },
     "Región Centro": {
-      "Zona Ayacucho": ["TPF-TC AYACASAMBLEA2"],
-      "Zona Ica": ["RUTA CHINCHA", "RUTA ICA", "RUTA PISCO", "TPF_CHINCHAITALIA", "TPF_ICA"],
-      "Zona Huancayo": ["RUTA HUANCAYO", "TPF HUANCAYO1", "TPF HUANCAYO"],
-      "Zona Huánuco": ["RUTA HUANUCO", "TPF HUANUCO"],
-      "Zona Iquitos": ["TPF_IQUITOS", "TPF_MAPIQUITOS"],
-      "Zona Pucallpa": ["TP_PUCALLPA"],
-      "Zona Tarapoto": ["TP_TARAPOTO"],
+      "Zona Ayacucho": {
+        "Tiendas": ["TPF-TC AYACASAMBLEA2"],
+      },
+      "Zona Ica": {
+        "Rutas": ["RUTA CHINCHA", "RUTA ICA", "RUTA PISCO"],
+        "Tiendas": ["TPF_CHINCHAITALIA", "TPF_ICA"],
+      },
+      "Zona Huancayo": {
+        "Rutas": ["RUTA HUANCAYO"],
+        "Tiendas": ["TPF HUANCAYO1", "TPF HUANCAYO"],
+      },
+      "Zona Huánuco": {
+        "Rutas": ["RUTA HUANUCO"],
+        "Tiendas": ["TPF HUANUCO"],
+      },
+      "Zona Iquitos": {
+        "Tiendas": ["TPF_IQUITOS", "TPF_MAPIQUITOS"],
+      },
+      "Zona Pucallpa": {
+        "Tiendas": ["TP_PUCALLPA"],
+      },
+      "Zona Tarapoto": {
+        "Tiendas": ["TP_TARAPOTO"],
+      },
     },
     "Región Sur": {
-      "Zona Arequipa": ["RUTA MALL CAYMA", "RUTA AREQUIPA", "TP_TPF_MAPAREQUIPA", "TPF AREQUIPA", "TPF PANORAMICO"],
-      "Zona Cuzco": ["RUTA CUSCO", "TPF CUSCO", "TPF CUSCO SOL"],
-      "Zona Puno": ["TP_JULIACA"],
-      "Zona Tacna": ["TP_TACNA"],
+      "Zona Arequipa": {
+        "Rutas": ["RUTA MALL CAYMA", "RUTA AREQUIPA"],
+        "Tiendas": ["TP_TPF_MAPAREQUIPA", "TPF AREQUIPA", "TPF PANORAMICO"],
+      },
+      "Zona Cuzco": {
+        "Rutas": ["RUTA CUSCO"],
+        "Tiendas": ["TPF CUSCO", "TPF CUSCO SOL"],
+      },
+      "Zona Puno": {
+        "Tiendas": ["TP_JULIACA"],
+      },
+      "Zona Tacna": {
+        "Tiendas": ["TP_TACNA"],
+      },
     },
     "Región Norte": {
-      "Zona CAX": ["TPF CAJAMARCA"],
-      "Zona CIX": ["RUTA MALL CHICLAYO", "TP_CHICLAYO", "TP_RPCHICLAYO", "TP_MAPCHICLAYO"],
-      "Zona Chimbote": ["RUTA CHIMBOTE", "TP_CHIMBOTE"],
-      "Zona Huaraz": ["TPF_HUARAZ"],
-      "Zona Jaen": ["TPF_ JAEN"],
-      "Zona Piura": ["TP_PAITA", "RUTA OPEN PIURA", "TPF-TC PIUREAL", "TPF PIURA GRAU", "TPF PIURA", "RUTA REAL PIURA", "TP_SULLANA", "TP_TALARA"],
-      "Zona TRUX": ["TP_TRUJILLO LARCO", "TPF_PORVENIR", "RUTA OPEN TRUJILLO", "RUTA MALL TRUJILLO", "TP_TRUJILLOJUNIN", "TPF_TRUJILLO"],
-      "Zona Tumbes": ["TP_TUMBES"],
+      "Zona CAX": {
+        "Tiendas": ["TPF CAJAMARCA"],
+      },
+      "Zona CIX": {
+        "Rutas": ["RUTA MALL CHICLAYO"],
+        "Tiendas": ["TP_CHICLAYO", "TP_RPCHICLAYO", "TP_MAPCHICLAYO"],
+      },
+      "Zona Chimbote": {
+        "Rutas": ["RUTA CHIMBOTE"],
+        "Tiendas": ["TP_CHIMBOTE"],
+      },
+      "Zona Huaraz": {
+        "Tiendas": ["TPF_HUARAZ"],
+      },
+      "Zona Jaen": {
+        "Tiendas": ["TPF_ JAEN"],
+      },
+      "Zona Piura": {
+        "Rutas": ["RUTA OPEN PIURA", "RUTA REAL PIURA"],
+        "Tiendas": ["TP_PAITA", "TPF-TC PIUREAL", "TPF PIURA GRAU", "TPF PIURA", "TP_SULLANA", "TP_TALARA"],
+      },
+      "Zona TRUX": {
+        "Rutas": ["TPF_PORVENIR", "RUTA OPEN TRUJILLO", "RUTA MALL TRUJILLO"],
+        "Tiendas": ["TP_TRUJILLO LARCO", "TP_TRUJILLOJUNIN", "TPF_TRUJILLO"],
+      },
+      "Zona Tumbes": {
+        "Tiendas": ["TP_TUMBES"],
+      },
     },
   };
 
@@ -551,6 +615,7 @@
   const $ = (id) => document.getElementById(id);
   const regionSelect = $("region");
   const supervisorSelect = $("supervisor");
+  const coberturaSelect = $("cobertura");
   const tiendaSelect = $("tienda");
   const brandQtyGrid = $("brandQtyGrid");
   const promotorInput = $("promotor");
@@ -693,7 +758,7 @@
     }
   }
 
-  // --- Cascada Región > Supervisor > Tienda ---
+  // --- Cascada Región > Zona > Cobertura > Punto de Venta ---
 
   function resetSelect(sel, placeholder) {
     sel.innerHTML = `<option value="">${placeholder}</option>`;
@@ -709,28 +774,48 @@
     const region = regionSelect.value;
     if (!region) {
       resetSelect(supervisorSelect, "Selecciona región primero");
-      resetSelect(tiendaSelect, "Selecciona zona primero");
+      resetSelect(coberturaSelect, "Selecciona zona primero");
+      resetSelect(tiendaSelect, "Selecciona cobertura primero");
       render();
       return;
     }
-    const supervisores = Object.keys(COVERAGE[region]);
+    const zonas = Object.keys(COVERAGE[region]);
     supervisorSelect.innerHTML = '<option value="">Selecciona zona</option>' +
-      supervisores.map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+      zonas.map((z) => `<option value="${escapeHtml(z)}">${escapeHtml(z)}</option>`).join("");
     supervisorSelect.disabled = false;
-    resetSelect(tiendaSelect, "Selecciona zona primero");
+    resetSelect(coberturaSelect, "Selecciona zona primero");
+    resetSelect(tiendaSelect, "Selecciona cobertura primero");
+    render();
+  }
+
+  function populateCobertura() {
+    const region = regionSelect.value;
+    const zona = supervisorSelect.value;
+    if (!region || !zona) {
+      resetSelect(coberturaSelect, "Selecciona zona primero");
+      resetSelect(tiendaSelect, "Selecciona cobertura primero");
+      render();
+      return;
+    }
+    const coberturas = Object.keys(COVERAGE[region][zona]);
+    coberturaSelect.innerHTML = '<option value="">Selecciona cobertura</option>' +
+      coberturas.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+    coberturaSelect.disabled = false;
+    resetSelect(tiendaSelect, "Selecciona cobertura primero");
     render();
   }
 
   function populateTiendas() {
     const region = regionSelect.value;
-    const supervisor = supervisorSelect.value;
-    if (!region || !supervisor) {
-      resetSelect(tiendaSelect, "Selecciona zona primero");
+    const zona = supervisorSelect.value;
+    const cobertura = coberturaSelect.value;
+    if (!region || !zona || !cobertura) {
+      resetSelect(tiendaSelect, "Selecciona cobertura primero");
       render();
       return;
     }
-    const tiendas = COVERAGE[region][supervisor];
-    tiendaSelect.innerHTML = '<option value="">Selecciona tienda</option>' +
+    const tiendas = COVERAGE[region][zona][cobertura];
+    tiendaSelect.innerHTML = '<option value="">Selecciona punto de venta</option>' +
       tiendas.map((t) => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join("");
     tiendaSelect.disabled = false;
     render();
@@ -769,22 +854,30 @@
 
   // El "Resumen del día" se va acotando a medida que se elige cada nivel
   // de la cascada: con solo la región elegida muestra toda la región, al
-  // sumar el supervisor lo acota a esa zona, y al elegir la tienda queda
-  // acotado a esa tienda sola. Nunca muestra el total de todo el equipo
-  // sin haber elegido al menos una región.
+  // sumar zona la acota a esa zona, al sumar cobertura la acota a Rutas o
+  // Tiendas de esa zona, y al elegir el punto de venta queda acotado a ese
+  // solo. Nunca muestra el total de todo el equipo sin elegir región.
   function daySummaryScopeInfo() {
     const region = regionSelect.value;
-    const supervisor = supervisorSelect.value;
+    const zona = supervisorSelect.value;
+    const cobertura = coberturaSelect.value;
     const tienda = tiendaSelect.value;
     const dateKey = fmtDateKey(currentDate);
 
     if (tienda) {
       return { label: tienda, sales: salesForTiendaDay(tienda, dateKey) };
     }
-    if (supervisor) {
+    if (cobertura) {
+      const puntos = new Set(COVERAGE[region][zona][cobertura]);
       return {
-        label: supervisor,
-        sales: allSales.filter((s) => s.region === region && s.supervisor === supervisor && s.fecha === dateKey),
+        label: `${zona} · ${cobertura}`,
+        sales: allSales.filter((s) => s.region === region && s.supervisor === zona && puntos.has(s.tienda) && s.fecha === dateKey),
+      };
+    }
+    if (zona) {
+      return {
+        label: zona,
+        sales: allSales.filter((s) => s.region === region && s.supervisor === zona && s.fecha === dateKey),
       };
     }
     if (region) {
@@ -825,24 +918,30 @@
   }
 
   function findSupervisorForTienda(region, tienda) {
-    const supervisores = COVERAGE[region] || {};
-    for (const sup in supervisores) {
-      if (supervisores[sup].includes(tienda)) return sup;
+    const zonas = COVERAGE[region] || {};
+    for (const zona in zonas) {
+      const coberturas = zonas[zona];
+      for (const cob in coberturas) {
+        if (coberturas[cob].includes(tienda)) return zona;
+      }
     }
     return "";
   }
 
-  // Todas las tiendas que caen dentro de lo elegido en la cascada: si solo
-  // hay región, todas las tiendas de la región; si hay supervisor, las de
-  // esa zona; si hay tienda, esa sola (no aplica "faltantes" a ese nivel).
+  // Todos los puntos de venta que caen dentro de lo elegido en la cascada:
+  // si solo hay región, todos los de la región; si hay zona, los de esa
+  // zona (Rutas + Tiendas); si hay cobertura, solo esa (Rutas o Tiendas);
+  // si hay punto de venta, ese solo (no aplica "faltantes" a ese nivel).
   function tiendasEnScope() {
     const region = regionSelect.value;
-    const supervisor = supervisorSelect.value;
+    const zona = supervisorSelect.value;
+    const cobertura = coberturaSelect.value;
     const tienda = tiendaSelect.value;
     if (!region) return [];
     if (tienda) return [tienda];
-    if (supervisor) return COVERAGE[region][supervisor].slice();
-    return Object.values(COVERAGE[region]).flat();
+    if (cobertura) return COVERAGE[region][zona][cobertura].slice();
+    if (zona) return Object.values(COVERAGE[region][zona]).flat();
+    return Object.values(COVERAGE[region]).flatMap((z) => Object.values(z).flat());
   }
 
   // Lista, dentro del scope elegido (región o supervisor), qué tiendas
@@ -1208,11 +1307,13 @@
   async function submitDay() {
     const region = regionSelect.value;
     const supervisor = supervisorSelect.value;
+    const cobertura = coberturaSelect.value;
     const tienda = tiendaSelect.value;
     const promotor = promotorInput.value.trim();
 
     if (!region) { regionSelect.focus(); return; }
     if (!supervisor) { supervisorSelect.focus(); return; }
+    if (!cobertura) { coberturaSelect.focus(); return; }
     if (!tienda) { tiendaSelect.focus(); return; }
     if (!promotor) {
       alert("Ingresa el nombre del promotor antes de enviar.");
@@ -1366,7 +1467,8 @@
   }
 
   regionSelect.addEventListener("change", populateSupervisores);
-  supervisorSelect.addEventListener("change", populateTiendas);
+  supervisorSelect.addEventListener("change", populateCobertura);
+  coberturaSelect.addEventListener("change", populateTiendas);
   tiendaSelect.addEventListener("change", render);
   enviarBtn.addEventListener("click", submitDay);
   $("monthSummaryBtn").addEventListener("click", openMonthSummary);
@@ -1405,7 +1507,8 @@
   promotorInput.value = localStorage.getItem("ventasPOS_promotor") || "";
 
   resetSelect(supervisorSelect, "Selecciona región primero");
-  resetSelect(tiendaSelect, "Selecciona zona primero");
+  resetSelect(coberturaSelect, "Selecciona zona primero");
+  resetSelect(tiendaSelect, "Selecciona cobertura primero");
   populateRegiones();
   populateBrandQtyGrid();
   { const cache = loadCache(); allSales = cache.sales; allJustificaciones = cache.justificaciones; }
