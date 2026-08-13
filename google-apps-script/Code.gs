@@ -237,29 +237,41 @@ function jsonOutput_(obj) {
 
 const REPORT_EMAIL = 'ivan.severinos@gmail.com';
 
+// Cascada Región > Zona > Punto de Venta, según "Coberturas Entel.xlsx".
+// Cada Punto de Venta puede ser una Tienda fija o una Ruta (promotor
+// viajero); ambas se registran igual en la app. DEBE coincidir exactamente
+// con el COVERAGE de index.html.
 const COVERAGE = {
-  'Región Lima - Cleiber Cortez': {
-    'Zona Sur': ['TPF_VILLASALVADOR', 'TP_TPF_MALLDELSUR', 'TP_TPF_JOCKEYPLAZA', 'TP_PLAZAREPUBLICA', 'TP_TPF_CHORRILLOS', 'TP_LARCO'],
-    'Zona Norte': ['TPF_PUENTEPIEDRA', 'TP_TPF_PLIMANORTE', 'TP_TPF_MEGAPLAZA', 'TP_TPF_COMAS', 'TPF_HUACHO28'],
-    'Zona Centro': ['TP_TPF_PLAZASANMIGUEL', 'TP_TPF_CENTRODELIMA', 'TPF_RPSALAVERRY', 'TP_TPF_MINKA2', 'TPF_BELLAVISTA'],
-    'Zona Este': ['TP_TPF_OPENANGAMOS', 'TP_TPF_SANTAANITA', 'TPF_MAPSJLURIGANCHO', 'TP_TPF_PURUCHUCO', 'TP_SJUANLURIGANCHO', 'TPF-TC SANTACLARA'],
+  'Región Lima': {
+    'Zona Norte': ['RUTA COMAS PRO', 'RUTA HUACHO - HUARAL', 'RUTA MEGA PLAZA', 'RUTA PLAZA NORTE', 'RUTA PUENTE PIEDRA', 'TP HUACHO', 'TP MEGAPLAZA', 'TP PLIMA NORTE', 'TP PUENTE PIEDRA', 'TPF COMAS'],
+    'Zona Sur': ['RUTA ATOCONGO', 'RUTA MALL DEL SUR', 'RUTA VES', 'TP_CHORRILLOS', 'TP_JOCKEY', 'TP_LARCO', 'TP_MALLDELSUR', 'TP_REPÚBLICA', 'TP_VILLAELSALVADOR'],
+    'Zona Este': ['RUTA SANTA ANITA - PURUCHUCO', 'RUTA SJL 1', 'RUTA SJL 2', 'TPF ANGAMOS', 'TPF MAP SJL', 'TPF PURUCHUCO', 'TPF SANTA ANITA', 'TPF SANTA CLARA', 'TPF SJL'],
+    'Zona Centro': ['RUTA CALLAO', 'RUTA CENTRO CIVICO', 'TP_BELLAVISTA', 'TP_CENTRO CIVICO', 'TP_MINKA', 'TP_SALAVERRY', 'TP_SAN MIGUEL'],
   },
-  'Región Norte - Liliana Bonilla': {
-    'Zona TRUX - CHIM': ['TP_CHIMBOTE', 'TPF_TRUJILLO', 'TP_TRUJILLO', 'TPF_HUARAZ', 'TPF_TRUJILLOJUNIN', 'TPF_MPCHIMBOTE', 'TPF_TRUJILLOPORVENIR', 'TPF_TRUPIZARRO'],
-    'Zona LAM - CAX': ['TPF_RPCHICLAYO', 'TP_CHICLAYO', 'TPF_MAPCHICLAYO', 'TPF_CAJAMARCA', 'TPF_JAEN', 'TPF_MPCAJAMARCA'],
-    'Zona PIU - TUM': ['TPF_PIUREAL', 'TP_TALARA', 'TP_PIURA', 'TPF_PAITA2', 'TPF_PIURA', 'TPF_SULLANA', 'TP_TPF_TUMBES'],
+  'Región Centro': {
+    'Zona Ayacucho': ['TPF-TC AYACASAMBLEA2'],
+    'Zona Ica': ['RUTA CHINCHA', 'RUTA ICA', 'RUTA PISCO', 'TPF_CHINCHAITALIA', 'TPF_ICA'],
+    'Zona Huancayo': ['RUTA HUANCAYO', 'TPF HUANCAYO1', 'TPF HUANCAYO'],
+    'Zona Huánuco': ['RUTA HUANUCO', 'TPF HUANUCO'],
+    'Zona Iquitos': ['TPF_IQUITOS', 'TPF_MAPIQUITOS'],
+    'Zona Pucallpa': ['TP_PUCALLPA'],
+    'Zona Tarapoto': ['TP_TARAPOTO'],
   },
-  'Región Sur - Tephy Diaz': {
-    'Jhon Lopez': ['TP_TPF_CUSCO', 'TP_CUSCO'],
-    'Omar Quispe': ['TP_TPF_JULIACA'],
-    'Rene Lopez': ['TPF_AQPPANORAMICO', 'TP_TPF_MAPAREQUIPA', 'TP_AREQUIPA', 'TP_TACNA'],
+  'Región Sur': {
+    'Zona Arequipa': ['RUTA MALL CAYMA', 'RUTA AREQUIPA', 'TP_TPF_MAPAREQUIPA', 'TPF AREQUIPA', 'TPF PANORAMICO'],
+    'Zona Cuzco': ['RUTA CUSCO', 'TPF CUSCO', 'TPF CUSCO SOL'],
+    'Zona Puno': ['TP_JULIACA'],
+    'Zona Tacna': ['TP_TACNA'],
   },
-  'Región Centro - Wendy Cawen': {
-    'Sacya Navarro': ['TP_HUANCAYO', 'TPF_HUANCAYO'],
-    'Cesar Ching': ['TP_ICA', 'TPF_CHINCHAITALIA', 'TPF_ICAPISCO'],
-    'Claudia Fajardo': ['TP_TPF_IQUITOS', 'TPF_TARAPOTO', 'TPF_MOYOBAMBA'],
-    'Sheila Flores': ['TPF_AYACASAMBLEA2'],
-    'Alexander Santiago': ['TPF_HUANUCO', 'TPF_PUCALLPA'],
+  'Región Norte': {
+    'Zona CAX': ['TPF CAJAMARCA'],
+    'Zona CIX': ['RUTA MALL CHICLAYO', 'TP_CHICLAYO', 'TP_RPCHICLAYO', 'TP_MAPCHICLAYO'],
+    'Zona Chimbote': ['RUTA CHIMBOTE', 'TP_CHIMBOTE'],
+    'Zona Huaraz': ['TPF_HUARAZ'],
+    'Zona Jaen': ['TPF_ JAEN'],
+    'Zona Piura': ['TP_PAITA', 'RUTA OPEN PIURA', 'TPF-TC PIUREAL', 'TPF PIURA GRAU', 'TPF PIURA', 'RUTA REAL PIURA', 'TP_SULLANA', 'TP_TALARA'],
+    'Zona TRUX': ['TP_TRUJILLO LARCO', 'TPF_PORVENIR', 'RUTA OPEN TRUJILLO', 'RUTA MALL TRUJILLO', 'TP_TRUJILLOJUNIN', 'TPF_TRUJILLO'],
+    'Zona Tumbes': ['TP_TUMBES'],
   },
 };
 

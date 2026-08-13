@@ -8,7 +8,7 @@ Se construyó una aplicación web (**"Ventas del Día"**) para que los promotore
 
 ### Lo que ya está hecho y funcional
 
-- **Registro de cierre diario**: cascada Región → Supervisor → Tienda (según tabla "Coverage Ventas diarias"), nombre de promotor autocompletado, grid de 8 marcas (Samsung, Honor, Xiaomi, Zte, Oppo, Vivo, Motorola, Apple) con cantidades, envío en un solo lote con confirmación previa.
+- **Registro de cierre diario**: cascada Región → Zona → Punto de Venta (según `Coberturas Entel.xlsx`), nombre de promotor autocompletado y obligatorio, grid de 8 marcas (Samsung, Honor, Xiaomi, Zte, Oppo, Vivo, Motorola, Apple) con cantidades, envío en un solo lote con confirmación previa.
 - **Inmutabilidad de registros**: una tienda solo puede registrar **hoy**, o **ayer** si quedó sin registrar (día de gracia). Una vez enviado un cierre para una tienda+fecha, queda bloqueado — validado tanto en cliente como en servidor.
 - **Resumen del día progresivo**: se muestra apenas se elige la Región (agregado de toda la región), se acota al elegir Supervisor (esa zona), y se acota más al elegir Tienda (esa tienda sola). Corrige un bug donde se mezclaban las ventas de todas las tiendas del día.
 - **Dashboard**: ventas de Honor vs. total, share de Honor, ranking de marcas, gráfico de línea de ventas diarias de Honor (14 días), ventas por región, ranking de promotores agrupado por región — filtrable por Hoy / Semana / Mes.
@@ -19,6 +19,7 @@ Se construyó una aplicación web (**"Ventas del Día"**) para que los promotore
 - **Tiendas sin registrar en el Resumen del día**: al elegir Región o Supervisor (no aplica a nivel Tienda individual), debajo del resumen se listan en píldoras las tiendas de ese scope que todavía no enviaron su cierre para el día que se está viendo, con conteo `(faltantes de total)`.
 - **Columna Share de Marca**: la tabla de Resumen del día ahora muestra, junto a las unidades por marca, el % que representa cada marca sobre el total del día (fila Total en 100%), ordenada siempre de mayor a menor.
 - **Motivo de no cierre (Vacaciones / Descanso Semanal / Descanso Médico / Otros)**: el supervisor o gerencia puede hacer clic sobre cualquier tienda de la lista roja "Tiendas sin registrar" y marcarle un motivo desde un modal. La tienda pasa a mostrarse aparte (píldora gris con el motivo) en vez de figurar como faltante real. Se guarda en una hoja nueva de Sheets (`Justificaciones`), separada de `Ventas` para no ensuciar los cálculos de unidades/share. El reporte diario por correo también suma una columna **Motivo** al Excel.
+- **Cobertura reemplazada por `Coberturas Entel.xlsx`**: la cascada pasó de Región → Supervisor → Tienda a **Región → Zona → Punto de Venta**. El archivo trajo una estructura distinta a la anterior: sin nombres de supervisor (reemplazados por Zona geográfica) y con dos tipos de punto de venta — **Tiendas** fijas y **Rutas** de promotor viajero — que ahora se registran por igual. Quedaron 4 regiones, 20 zonas y 84 puntos de venta en total.
 - **Guía visual de usuario**: infografía tipo "ticket de cierre de caja", con los colores de marca reales de Entel Perú (`#002EFF` / `#42E8B4`) y Honor (`#00B1FF → #FF00D0`), exportada como Artifact web, PNG y PDF para compartir por WhatsApp.
 - **Distribución**: app publicada en GitHub Pages, con link corto personalizado (`tinyurl.com/cierre-ventas-diarias`) tras descartar `is.gd` (rechaza dominios `*.github.io`).
 
@@ -58,6 +59,7 @@ Se construyó una aplicación web (**"Ventas del Día"**) para que los promotore
 | Motivo de no cierre lo marca el supervisor/gerencia "después" (no el promotor en el momento) | Decisión explícita del usuario: en vacaciones o descanso médico el promotor no puede entrar a la app ese día, así que quien revisa la lista de faltantes es quien debe poder justificarlas | La UI de justificar vive junto a la lista "Tiendas sin registrar" (clic en la píldora roja), no en el flujo de registro de ventas del promotor |
 | Justificaciones en una hoja de Sheets separada (`Justificaciones`), no mezcladas con `Ventas` | Una justificación no es una venta; mezclarlas en la misma hoja hubiera obligado a filtrar marcas "falsas" en cada cálculo de unidades/ranking/share | Nuevo endpoint `action: 'justificar'` en `doPost`; `doGet` ahora devuelve `data` (ventas) y `justificaciones` por separado |
 | Tienda+fecha con venta O con motivo son mutuamente excluyentes (igual que el candado de inmutabilidad) | Evitar que una tienda quede con ambos registros a la vez, lo cual no tiene sentido de negocio | Validado en cliente (`updateFormLock`, botón "Enviar" bloqueado) y en servidor (`saveJustificacion_` y `doPost` se chequean cruzado) |
+| Cobertura reemplazada por completo desde `Coberturas Entel.xlsx`; nivel "Supervisor" pasa a ser "Zona" y se incluyen Rutas además de Tiendas | El Excel entregado no tenía nombres de supervisor, tenía Zona geográfica; se confirmó con el usuario (3 preguntas): usar Zona en vez de Supervisor, incluir Rutas igual que Tiendas, y reemplazar todo en vez de fusionar | Se pierden los nombres de supervisores en la cascada (label de UI cambiado de "Supervisor" a "Zona", variables internas sin renombrar para no ampliar el diff); el historial de ventas ya registrado con los códigos de tienda viejos queda intacto pero esos códigos ya no existen en el `COVERAGE` nuevo, así que el reporte diario de faltantes arrancará "en cero" bajo los 84 puntos de venta nuevos |
 
 ---
 
@@ -77,15 +79,16 @@ Se construyó una aplicación web (**"Ventas del Día"**) para que los promotore
 
 **Estado:** ambos cambios están en `index.html`, publicados en GitHub Pages (no requerían cambios en `Code.gs` — se calculan en el cliente a partir de los datos ya sincronizados).
 
-### ⚠️ Pendiente de acción manual: Motivo de no cierre (Vacaciones / Descansos / Otros)
+### ⚠️ Pendiente de acción manual: redesplegar `Code.gs` (Motivo de no cierre + Cobertura nueva)
 
-**Qué se hizo:** se agregó la función completa (front-end en `index.html` + backend en `Code.gs`, hoja nueva `Justificaciones`, columna Motivo en el reporte diario). Probado en navegador contra el backend viejo: la píldora abre el modal, el campo de detalle aparece solo con "Otros", y el rollback ante un backend desactualizado funcionó como se esperaba.
+**Qué se hizo:** se agregó la función de Motivo de no cierre (front-end en `index.html` + backend en `Code.gs`, hoja nueva `Justificaciones`, columna Motivo en el reporte diario) y luego se reemplazó todo el `COVERAGE` por la estructura Región → Zona → Punto de Venta de `Coberturas Entel.xlsx` (4 regiones, 20 zonas, 84 puntos de venta, incluyendo Rutas). Probado en navegador (servidor local): la cascada Región → Zona → Tienda carga bien las 4 regiones y sus zonas, "Tiendas sin registrar" lista los 8 puntos de venta de Zona Piura correctamente, y el modal de motivo funciona con rollback limpio contra el backend viejo.
 
-**Por qué es el siguiente paso:** `Code.gs` no se redespliega solo con el push a GitHub — el Web App de Apps Script sigue corriendo la versión anterior hasta que se publique manualmente una nueva versión.
+**Por qué es el siguiente paso:** `Code.gs` no se redespliega solo con el push a GitHub — el Web App de Apps Script sigue corriendo la versión anterior (con el `COVERAGE` viejo y sin el endpoint de motivos) hasta que se publique manualmente una nueva versión.
 
 **Criterios de aceptación:**
-- [ ] En el editor de Apps Script (Extensiones > Apps Script de la Google Sheet), el contenido de `Code.gs` fue reemplazado por la versión actualizada del repo.
+- [ ] En el editor de Apps Script (Extensiones > Apps Script de la Google Sheet), el contenido de `Code.gs` fue reemplazado por la versión actualizada del repo (incluye el `COVERAGE` nuevo).
 - [ ] Se hizo **Desplegar > Administrar implementaciones** → lápiz ✏️ → **Nueva versión** → Desplegar.
+- [ ] Al abrir la app, la cascada Región → Zona → Tienda muestra las 4 regiones y zonas nuevas (no las viejas con nombre de supervisor).
 - [ ] Al abrir la app y hacer clic en una tienda de la lista roja "Tiendas sin registrar", elegir un motivo y guardar, la tienda pasa a la píldora gris con el motivo (sin error de "Sin datos para registrar").
 - [ ] En la Google Sheet aparece una pestaña nueva **Justificaciones** con la fila guardada.
 - [ ] Al día siguiente, el correo de "Tiendas Faltantes" incluye la columna **Motivo** en el Excel adjunto para las tiendas justificadas.
