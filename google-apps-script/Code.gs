@@ -5,6 +5,33 @@
  * Instrucciones completas en /SETUP_SHEETS.md
  */
 
+// -----------------------------------------------------------------------
+// APP EN BAJA: reemplazada por una nueva plataforma. Con APP_ACTIVA en
+// false, ninguna escritura se guarda — ni desde el formulario, ni desde
+// una llamada POST hecha a mano, ni ejecutando estas funciones
+// directamente desde el editor de Apps Script. El candado está en
+// isAppActiva_() / bloquearEscritura_(), usado al inicio de doPost,
+// saveJustificacion_ y deleteRow_. No borra ni modifica ningún dato ya
+// guardado en Ventas ni Justificaciones — solo impide que se agregue o
+// borre algo nuevo. Para reactivar la app, cambiar esta constante a `true`.
+// -----------------------------------------------------------------------
+const APP_ACTIVA = false;
+const NEW_APP_URL = 'https://script.google.com/macros/s/AKfycby8gXhDZpeLCzlBO9swL-f2Tn0cLBWD1AOfCJa45MmFZ4q-ss8N7dEdlraVImuJkn5INw/exec';
+
+function isAppActiva_() {
+  return APP_ACTIVA;
+}
+
+// Respuesta centralizada de "escritura bloqueada". Cualquier función que
+// escriba (agrega o borra filas) debe llamar a esto primero y devolver su
+// resultado si la app está en baja.
+function bloquearEscritura_() {
+  return jsonOutput_({
+    ok: false,
+    error: 'Esta aplicación fue descontinuada y ya no acepta registros ni modificaciones. Usa la nueva plataforma: ' + NEW_APP_URL,
+  });
+}
+
 const SHEET_NAME = 'Ventas';
 const HEADERS = ['ID', 'Timestamp', 'Fecha', 'Hora', 'Región', 'Supervisor', 'Tienda', 'Promotor', 'Marca', 'Cantidad'];
 
@@ -75,6 +102,11 @@ function formatHora_(v) {
 }
 
 function doPost(e) {
+  // Candado centralizado: mientras la app esté en baja, ningún POST guarda
+  // ni borra nada, sea cual sea el "action" que traiga (venta, motivo,
+  // delete, o cualquier otro que se agregue más adelante).
+  if (!isAppActiva_()) return bloquearEscritura_();
+
   const body = JSON.parse(e.postData.contents);
 
   if (body.action === 'delete') {
@@ -133,6 +165,11 @@ function tiendaFechaExiste_(sheet, tienda, fecha) {
 // descanso semanal, descanso médico, otros). Lo marca el supervisor o
 // gerencia al revisar la lista de tiendas faltantes, no el promotor.
 function saveJustificacion_(body) {
+  // Mismo candado que en doPost. Se repite acá para que esta función quede
+  // bloqueada también si alguien la ejecuta directamente desde el editor
+  // de Apps Script, sin pasar por doPost.
+  if (!isAppActiva_()) return bloquearEscritura_();
+
   if (!body.tienda || !body.fecha || !body.motivo) {
     return jsonOutput_({ ok: false, error: 'Faltan datos para registrar el motivo.' });
   }
@@ -170,6 +207,11 @@ function justificacionExiste_(sheet, tienda, fecha) {
 }
 
 function deleteRow_(sheet, id) {
+  // Mismo candado que en doPost. Se repite acá para que esta función quede
+  // bloqueada también si alguien la ejecuta directamente desde el editor
+  // de Apps Script, sin pasar por doPost.
+  if (!isAppActiva_()) return bloquearEscritura_();
+
   const rows = sheet.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
     if (String(rows[i][0]) === String(id)) {

@@ -326,10 +326,101 @@
     .brand-qty-grid { grid-template-columns: repeat(2, 1fr); }
     header { flex-direction: column; }
   }
+
+  /* --- Pantalla de migración (app en baja) --- */
+  /* Oculta por defecto vía CSS, no vía JS: aunque JavaScript esté
+     deshabilitado o falle, el usuario nunca ve el formulario viejo. */
+  #appRoot { display: none; }
+  .migration-screen {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    padding: 24px;
+    z-index: 1000;
+    overflow-y: auto;
+  }
+  .migration-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 44px 32px;
+    max-width: 460px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.08);
+  }
+  .migration-icon {
+    font-size: 40px;
+    width: 84px;
+    height: 84px;
+    line-height: 84px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    margin: 0 auto 22px;
+  }
+  .migration-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+  }
+  .migration-text {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin: 0 0 28px;
+  }
+  .migration-btn {
+    display: block;
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    padding: 16px 20px;
+    border-radius: 10px;
+    text-decoration: none;
+    box-sizing: border-box;
+    transition: opacity .12s ease;
+  }
+  .migration-btn:hover { opacity: 0.88; }
+  .migration-btn:active { opacity: 0.75; }
+  .migration-note {
+    margin-top: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--danger);
+    background: var(--danger-soft);
+    border-radius: 8px;
+    padding: 10px 12px;
+    line-height: 1.5;
+  }
+  @media (max-width: 480px) {
+    .migration-card { padding: 32px 20px; }
+    .migration-title { font-size: 19px; }
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
+<div id="migrationScreen" class="migration-screen">
+  <div class="migration-card">
+    <div class="migration-icon">🔄</div>
+    <h1 class="migration-title">Nos estamos mudando a una nueva plataforma</h1>
+    <p class="migration-text">
+      La app <strong>"Ventas del Día"</strong> fue descontinuada. Para continuar registrando o consultando información de ventas, usa nuestra nueva plataforma.
+    </p>
+    <a class="migration-btn" href="https://script.google.com/macros/s/AKfycby8gXhDZpeLCzlBO9swL-f2Tn0cLBWD1AOfCJa45MmFZ4q-ss8N7dEdlraVImuJkn5INw/exec">
+      👉 Ir a la nueva aplicación
+    </a>
+    <div class="migration-note">⚠️ Esta aplicación ya no acepta nuevos registros ni modificaciones.</div>
+  </div>
+</div>
+<div class="wrap" id="appRoot">
   <header>
     <div>
       <h1>📱 Ventas del Día</h1>
@@ -505,6 +596,21 @@
 
 <script>
 (function () {
+  // -----------------------------------------------------------------------
+  // APP EN BAJA: reemplazada por una nueva plataforma. Con APP_ACTIVA en
+  // false, la app corta acá mismo — no se registra ni un solo listener, no
+  // hay fetch a Sheets, no hay forma de interactuar con el formulario viejo.
+  // La pantalla de migración ya es la vista visible por defecto (CSS, no
+  // JS), así que ni siquiera depende de que este script llegue a correr.
+  // Para reactivar la app completa (sin perder nada del código de abajo):
+  // cambiar esta constante a `true`.
+  // -----------------------------------------------------------------------
+  const APP_ACTIVA = false;
+  if (!APP_ACTIVA) return;
+
+  document.getElementById("migrationScreen").style.display = "none";
+  document.getElementById("appRoot").style.display = "block";
+
   const CONFIG = {
     // Pega aquí la URL de tu Web App de Google Apps Script (ver SETUP_SHEETS.md)
     SHEETS_URL: "https://script.google.com/macros/s/AKfycbza9kDf4jE8BGCgWOeN_sZdJq0kmLCE_ppZ9vuaQhHT9_irWD2j2ZOT2fk5BHMxxj1qvg/exec",

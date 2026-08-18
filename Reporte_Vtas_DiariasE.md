@@ -6,6 +6,10 @@
 
 Se construyó una aplicación web (**"Ventas del Día"**) para que los promotores de Entel Perú registren el cierre de ventas diario de smartphones (Honor y otras marcas) por punto de venta (PDV), sin backend propio: el front-end es un único `index.html` estático servido por GitHub Pages, y la persistencia corre sobre una Google Sheet vía un Web App de Google Apps Script. Incluye dashboard gerencial, exportación de reportes, aviso automático de tiendas sin registrar por correo, y una guía visual de uso para distribuir al equipo.
 
+### 🛑 APP EN BAJA — reemplazada por una nueva plataforma
+
+Esta app fue puesta en modo **solo redirección**: cualquiera que entre ve únicamente una pantalla de migración con un botón hacia la nueva plataforma, y el backend rechaza cualquier intento de guardar o borrar datos. Nada del código ni de los datos históricos (`Ventas`, `Justificaciones`) se borró — todo sigue en el repo y en la Google Sheet, apagado detrás de una bandera `APP_ACTIVA = false` fácil de revertir. Detalle completo en la sección 3.
+
 ### Lo que ya está hecho y funcional
 
 - **Registro de cierre diario**: cascada Región → Zona → Cobertura (Rutas/Tiendas) → Punto de Venta (según `Coberturas Entel.xlsx`), nombre de promotor autocompletado y obligatorio, grid de 8 marcas (Samsung, Honor, Xiaomi, Zte, Oppo, Vivo, Motorola, Apple) con cantidades, envío en un solo lote con confirmación previa.
@@ -22,6 +26,7 @@ Se construyó una aplicación web (**"Ventas del Día"**) para que los promotore
 - **Cobertura reemplazada por `Coberturas Entel.xlsx`**: la cascada pasó de Región → Supervisor → Tienda a **Región → Zona → Cobertura → Punto de Venta**, agregando "Cobertura" (Rutas / Tiendas) como su propio nivel con un 4to selector en el formulario — refleja fielmente las 4 columnas del Excel en vez de mezclar Rutas y Tiendas en una sola lista. Sin nombres de supervisor (reemplazados por Zona geográfica). Quedaron 4 regiones, 20 zonas y 84 puntos de venta en total.
 - **Guía visual de usuario**: infografía tipo "ticket de cierre de caja", con los colores de marca reales de Entel Perú (`#002EFF` / `#42E8B4`) y Honor (`#00B1FF → #FF00D0`), exportada como Artifact web, PNG y PDF para compartir por WhatsApp.
 - **Distribución**: app publicada en GitHub Pages, con link corto personalizado (`tinyurl.com/cierre-ventas-diarias`) tras descartar `is.gd` (rechaza dominios `*.github.io`).
+- **Modo "app en baja" (retiro/redirección)**: bandera `APP_ACTIVA = false` en `index.html` y en `Code.gs`. En el front, la pantalla de migración es la vista por defecto vía CSS (no depende de que el JS llegue a correr) y el script corta antes de registrar un solo listener o llamar a Sheets. En el backend, `doPost`, `saveJustificacion_` y `deleteRow_` rechazan cualquier escritura con un mensaje que apunta a la nueva plataforma. No se borró nada: ni el código viejo, ni `Ventas`, ni `Justificaciones`. Revertir es cambiar la constante a `true` en ambos archivos.
 
 ### Estado de los componentes / archivos
 
@@ -61,6 +66,7 @@ Se construyó una aplicación web (**"Ventas del Día"**) para que los promotore
 | Tienda+fecha con venta O con motivo son mutuamente excluyentes (igual que el candado de inmutabilidad) | Evitar que una tienda quede con ambos registros a la vez, lo cual no tiene sentido de negocio | Validado en cliente (`updateFormLock`, botón "Enviar" bloqueado) y en servidor (`saveJustificacion_` y `doPost` se chequean cruzado) |
 | Cobertura reemplazada por completo desde `Coberturas Entel.xlsx`; nivel "Supervisor" pasa a ser "Zona" y se incluyen Rutas además de Tiendas | El Excel entregado no tenía nombres de supervisor, tenía Zona geográfica; se confirmó con el usuario (3 preguntas): usar Zona en vez de Supervisor, incluir Rutas igual que Tiendas, y reemplazar todo en vez de fusionar | Se pierden los nombres de supervisores en la cascada (label de UI cambiado de "Supervisor" a "Zona", variables internas sin renombrar para no ampliar el diff); el historial de ventas ya registrado con los códigos de tienda viejos queda intacto pero esos códigos ya no existen en el `COVERAGE` nuevo, así que el reporte diario de faltantes arrancará "en cero" bajo los 84 puntos de venta nuevos |
 | Cobertura (Rutas/Tiendas) agregada como su propio 4to nivel de cascada, en vez de mezclarla dentro de la lista de puntos de venta por Zona | Primer intento fusionó Rutas y Tiendas en una sola lista por Zona; el usuario aclaró que quería reflejar fielmente las 4 columnas del Excel (Región, ZONA, Cobertura, Punto de Venta), no solo su contenido | `COVERAGE` pasó de 3 a 4 niveles anidados (`COVERAGE[región][zona][cobertura] = [...]`) en `index.html` y `Code.gs`; se agregó el selector "Cobertura" al formulario (grid de 4 columnas) y una función `populateCobertura()` nueva en la cascada. No se persiste la Cobertura en la hoja de Sheets — se recalcula buscando en `COVERAGE` a partir del código de Punto de Venta, igual que ya se hacía para encontrar la Zona |
+| App puesta en baja con bandera `APP_ACTIVA` + pantalla de migración, en vez de borrar el código o dar de baja el deploy | La app va a ser reemplazada por una nueva plataforma; el usuario pidió explícitamente no perder código ni datos históricos y poder revertir fácil | En `index.html`: la pantalla de migración es el estado por defecto vía CSS (`#appRoot{display:none}`, `.migration-screen{display:flex}`), y el script corta con `if (!APP_ACTIVA) return;` antes de registrar cualquier listener o llamar a `syncFromSheets()` — así ni siquiera queda un botón "deshabilitado" pero clickeable, directamente no hay handler. En `Code.gs`: `doPost`, `saveJustificacion_` y `deleteRow_` devuelven un error fijo si `!isAppActiva_()`, cada uno con su propio chequeo (no solo en `doPost`) para que quede bloqueado incluso ejecutando esas funciones a mano desde el editor de Apps Script. `doGet` (lectura) y el reporte diario de faltantes quedan sin tocar — el pedido era bloquear escritura, no lectura |
 
 ---
 
@@ -80,16 +86,22 @@ Se construyó una aplicación web (**"Ventas del Día"**) para que los promotore
 
 **Estado:** ambos cambios están en `index.html`, publicados en GitHub Pages (no requerían cambios en `Code.gs` — se calculan en el cliente a partir de los datos ya sincronizados).
 
-### ⚠️ Pendiente de acción manual: redesplegar `Code.gs` (Motivo de no cierre + Cobertura nueva de 4 niveles)
+### ✅ Completado: Cobertura nueva de 4 niveles + Motivo de no cierre (pendiente de redeploy, ver abajo)
 
-**Qué se hizo:** se agregó la función de Motivo de no cierre (front-end en `index.html` + backend en `Code.gs`, hoja nueva `Justificaciones`, columna Motivo en el reporte diario) y luego se reemplazó todo el `COVERAGE` por la estructura **Región → Zona → Cobertura → Punto de Venta** de `Coberturas Entel.xlsx` (4 regiones, 20 zonas, 84 puntos de venta entre Rutas y Tiendas), con Cobertura como su propio selector en el formulario (4 campos: Región, Zona, Cobertura, Punto de Venta). Probado en navegador (servidor local) en los 4 niveles de la cascada — incluyendo Zona Piura con ambas coberturas, y Región Sur agregando sus 10 puntos de venta — y el modal de motivo sigue identificando bien la tienda y su zona.
+Se agregó la función de Motivo de no cierre (front-end en `index.html` + backend en `Code.gs`, hoja nueva `Justificaciones`, columna Motivo en el reporte diario) y se reemplazó todo el `COVERAGE` por la estructura **Región → Zona → Cobertura → Punto de Venta** de `Coberturas Entel.xlsx` (4 regiones, 20 zonas, 84 puntos de venta entre Rutas y Tiendas). Probado en navegador en los 4 niveles de la cascada.
 
-**Por qué es el siguiente paso:** `Code.gs` no se redespliega solo con el push a GitHub — el Web App de Apps Script sigue corriendo la versión anterior (con el `COVERAGE` viejo de 2 niveles y sin el endpoint de motivos) hasta que se publique manualmente una nueva versión.
+### 🛑 Completado: App puesta en baja (pantalla de migración + candado en el backend)
+
+**Qué se hizo, a pedido explícito del usuario ("la app va a ser dada de baja y reemplazada"):**
+- `index.html`: `APP_ACTIVA = false` al tope del script. La pantalla de migración (ícono, título "Nos estamos mudando a una nueva plataforma", texto, botón grande, y aviso de que ya no acepta registros) es la vista visible por defecto vía CSS — no depende de que el JS corra. El script corta con `return` antes de registrar un solo event listener, así que ningún botón viejo hace nada aunque alguien lo fuerce a visible por consola.
+- `Code.gs`: mismo `APP_ACTIVA = false`. `doPost` (el único punto de entrada de escritura del Web App), `saveJustificacion_` y `deleteRow_` devuelven un error fijo apuntando a la nueva plataforma si la app está inactiva — las tres funciones que antes podían guardar o borrar datos quedan bloqueadas, incluso ejecutándolas a mano desde el editor de Apps Script.
+- **Nada se borró**: el código viejo del formulario, dashboard, y toda la data en `Ventas`/`Justificaciones` sigue intacta. Revertir es cambiar `APP_ACTIVA` a `true` en los dos archivos.
+- Probado en navegador (servidor local) en desktop, tablet (768px) y mobile (375px): la card de migración se ve centrada y legible en los tres tamaños, y `filter: interactive` sobre la página confirma que el único elemento interactivo es el botón "Ir a la nueva aplicación" — todo lo demás del formulario viejo queda fuera del árbol interactivo.
+
+**Por qué sigue siendo el siguiente paso:** igual que los cambios anteriores, `Code.gs` no se redespliega solo con el push a GitHub — el Web App de Apps Script sigue sirviendo la versión vieja (sin candado, sin Cobertura de 4 niveles, sin Motivo) hasta que se publique manualmente una nueva versión. Mientras no se redespliegue, el backend real sigue aceptando escrituras aunque el front-end ya muestre la pantalla de migración.
 
 **Criterios de aceptación:**
-- [ ] En el editor de Apps Script (Extensiones > Apps Script de la Google Sheet), el contenido de `Code.gs` fue reemplazado por la versión actualizada del repo (incluye el `COVERAGE` nuevo de 4 niveles).
+- [ ] En el editor de Apps Script, el contenido de `Code.gs` fue reemplazado por la versión actualizada del repo (incluye `APP_ACTIVA`, el candado en `doPost`/`saveJustificacion_`/`deleteRow_`, el `COVERAGE` de 4 niveles, y el endpoint de motivos).
 - [ ] Se hizo **Desplegar > Administrar implementaciones** → lápiz ✏️ → **Nueva versión** → Desplegar.
-- [ ] Al abrir la app, la cascada Región → Zona → Cobertura → Punto de Venta muestra las 4 regiones, sus zonas, y Rutas/Tiendas como opciones de Cobertura (no las viejas con nombre de supervisor).
-- [ ] Al abrir la app y hacer clic en un punto de venta de la lista roja "Tiendas sin registrar", elegir un motivo y guardar, pasa a la píldora gris con el motivo (sin error de "Sin datos para registrar").
-- [ ] En la Google Sheet aparece una pestaña nueva **Justificaciones** con la fila guardada.
-- [ ] Al día siguiente, el correo de "Tiendas Faltantes" incluye la columna **Motivo** en el Excel adjunto para las tiendas justificadas.
+- [ ] Probar que un POST al Web App (por ejemplo, intentando registrar una venta desde una copia vieja de la app, o con una herramienta como Postman) devuelve el error de "aplicación descontinuada" en vez de guardar la fila.
+- [ ] `index.html` en producción (GitHub Pages) muestra la pantalla de migración al abrir el link, sin ningún rastro del formulario viejo.
